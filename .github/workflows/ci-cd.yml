@@ -1,0 +1,97 @@
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: fora-soft-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Test and build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit and integration tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Docker image build
+        run: docker build -t fora-soft-video-chat:ci .
+
+  deploy:
+    name: Deploy to moscow
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      DEPLOY_HOST: ${{ secrets.MOSCOW_SSH_HOST }}
+      DEPLOY_USER: ${{ secrets.MOSCOW_SSH_USER }}
+      DEPLOY_PORT: ${{ secrets.MOSCOW_SSH_PORT || '22' }}
+      APP_PORT: ${{ secrets.MOSCOW_APP_PORT || '3017' }}
+      APP_DIR: /opt/fora-soft-video-chat
+      IMAGE_NAME: fora-soft-video-chat
+      CONTAINER_NAME: fora-soft-video-chat
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH key
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.MOSCOW_SSH_PRIVATE_KEY }}" > ~/.ssh/moscow_deploy
+          chmod 600 ~/.ssh/moscow_deploy
+          ssh-keyscan -p "$DEPLOY_PORT" "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload source
+        run: |
+          tar --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='client/dist' \
+            --exclude='test-results' \
+            --exclude='playwright-report' \
+            -czf /tmp/fora-soft-video-chat.tgz .
+          ssh -i ~/.ssh/moscow_deploy -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p '$APP_DIR'"
+          scp -i ~/.ssh/moscow_deploy -P "$DEPLOY_PORT" /tmp/fora-soft-video-chat.tgz "$DEPLOY_USER@$DEPLOY_HOST:$APP_DIR/source.tgz"
+
+      - name: Build and restart container
+        run: |
+          ssh -i ~/.ssh/moscow_deploy -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "set -euo pipefail
+             cd '$APP_DIR'
+             rm -rf current
+             mkdir current
+             tar -xzf source.tgz -C current
+             cd current
+             docker build -t '$IMAGE_NAME:latest' .
+             docker rm -f '$CONTAINER_NAME' 2>/dev/null || true
+             docker run -d --restart unless-stopped \
+               --name '$CONTAINER_NAME' \
+               -e PORT=3001 \
+               -e CLIENT_ORIGIN='*' \
+               -p '$APP_PORT:3001' \
+               '$IMAGE_NAME:latest'"
+
+      - name: Health check
+        run: |
+          sleep 3
+          ssh -i ~/.ssh/moscow_deploy -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "curl -fsS 'http://127.0.0.1:$APP_PORT/health'"
