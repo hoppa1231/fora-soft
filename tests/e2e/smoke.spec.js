@@ -136,3 +136,29 @@ test("toggles chat panel from controls", async ({ browser }) => {
 
   await page.close();
 });
+
+test("keeps room controls and video stage inside mobile viewport", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await createRoom(page, "Мобильная");
+
+  const metrics = await page.evaluate(() => {
+    const controls = document.querySelector(".controls").getBoundingClientRect();
+    const stage = document.querySelector(".room-main__stage").getBoundingClientRect();
+
+    return {
+      controlsBottom: controls.bottom,
+      controlsTop: controls.top,
+      documentHeight: document.documentElement.scrollHeight,
+      height: window.innerHeight,
+      stageBottom: stage.bottom,
+      stageTop: stage.top
+    };
+  });
+
+  expect(metrics.stageTop).toBeGreaterThanOrEqual(0);
+  expect(metrics.stageBottom).toBeLessThanOrEqual(metrics.controlsTop);
+  expect(metrics.controlsBottom).toBeLessThanOrEqual(metrics.height);
+  expect(metrics.documentHeight).toBeLessThanOrEqual(metrics.height + 1);
+
+  await page.close();
+});

@@ -3,6 +3,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 const ICE_SERVERS = [{ urls: "stun:stun.l.google.com:19302" }];
 const ICE_QUEUE_LIMIT = 32;
 
+async function loadIceServers() {
+  try {
+    const response = await fetch("/rtc-config", { cache: "no-store" });
+    if (!response.ok) return ICE_SERVERS;
+
+    const config = await response.json();
+    return Array.isArray(config.iceServers) && config.iceServers.length > 0 ? config.iceServers : ICE_SERVERS;
+  } catch {
+    return ICE_SERVERS;
+  }
+}
+
 function streamTrackByKind(stream, kind) {
   return kind === "audio" ? stream?.getAudioTracks()[0] ?? null : stream?.getVideoTracks()[0] ?? null;
 }
@@ -155,13 +167,29 @@ export function usePeerConnections({
 }) {
   const peersRef = useRef(new Map());
   const offeredRef = useRef(new Set());
+  const iceServersRef = useRef(null);
   const localStreamRef = useRef(localStream);
   const [remoteStreams, setRemoteStreams] = useState({});
   const [connectionIssues, setConnectionIssues] = useState({});
+  const [iceServersReady, setIceServersReady] = useState(false);
 
   useEffect(() => {
     localStreamRef.current = localStream;
   }, [localStream]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadIceServers().then((iceServers) => {
+      if (cancelled) return;
+      iceServersRef.current = iceServers;
+      setIceServersReady(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const updateRemoteStream = useCallback((participant, stream) => {
     setRemoteStreams((items) => ({ ...items, [participant]: stream }));
@@ -195,7 +223,7 @@ export function usePeerConnections({
     const current = peersRef.current.get(participant);
     if (current) return current;
 
-    const peer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const peer = new RTCPeerConnection({ iceServers: iceServersRef.current ?? ICE_SERVERS });
 
     peer.onicecandidate = (event) => {
       if (event.candidate) {
@@ -253,6 +281,8 @@ export function usePeerConnections({
   }, [refreshRemoteStream, sendSignal, updateRemoteStream]);
 
   useEffect(() => {
+    if (!iceServersReady) return;
+
     for (const [participant, peer] of peersRef.current.entries()) {
       syncLocalTracks(peer, participant, localStream, sendSignal, { renegotiateOnAdd: true }).catch(() => {
           setConnectionIssues((items) => ({
@@ -261,10 +291,10 @@ export function usePeerConnections({
           }));
       });
     }
-  }, [localStream, sendSignal]);
+  }, [iceServersReady, localStream, sendSignal]);
 
   useEffect(() => {
-    if (!joined) return;
+    if (!joined || !iceServersReady) return;
 
     for (const participant of existingParticipants) {
       if (participant.id === participantId || offeredRef.current.has(participant.id)) {
@@ -286,10 +316,10 @@ export function usePeerConnections({
           }));
         });
     }
-  }, [createPeer, existingParticipants, joined, participantId, sendSignal]);
+  }, [createPeer, existingParticipants, iceServersReady, joined, participantId, sendSignal]);
 
   useEffect(() => {
-    if (!joined || signals.length === 0) return;
+    if (!joined || !iceServersReady || signals.length === 0) return;
 
     for (const signal of signals) {
       consumeSignal(signal);
@@ -358,7 +388,7 @@ export function usePeerConnections({
           });
       }
     }
-  }, [consumeSignal, createPeer, joined, removePeer, sendSignal, signals]);
+  }, [consumeSignal, createPeer, iceServersReady, joined, removePeer, sendSignal, signals]);
 
   const closeAll = useCallback(() => {
     for (const peer of peersRef.current.values()) {
