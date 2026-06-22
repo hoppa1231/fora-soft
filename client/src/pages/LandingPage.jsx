@@ -3,13 +3,14 @@ import { useState } from "react";
 import { createGuestName, createRoomId, isValidRoomId, validateDisplayName } from "../utils/validation.js";
 
 export function LandingPage({ inviteRoomId, onEnterRoom }) {
-  const [displayName, setDisplayName] = useState(() => createGuestName());
+  const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const isInvite = Boolean(inviteRoomId);
 
   const submit = (event) => {
     event.preventDefault();
-    const result = validateDisplayName(displayName);
+    const name = displayName.trim();
+    const result = name ? validateDisplayName(name) : { ok: true, value: createGuestName() };
 
     if (!result.ok) {
       setError(result.message);
@@ -33,11 +34,11 @@ export function LandingPage({ inviteRoomId, onEnterRoom }) {
         <div className="entry__mark">
           <Video aria-hidden="true" size={28} />
         </div>
-        <h1 id="entry-title">Видеочат-комната</h1>
+        <h1 id="entry-title">Простецкий видеочат</h1>
         <p>
           {isInvite
-            ? "Имя уже готово, можно сразу присоединиться."
-            : "Имя уже готово, можно сразу создать ссылку для звонка до четырёх участников."}
+            ? "Можно сразу присоединиться или указать имя перед входом."
+            : "Можно сразу создать комнату или указать имя перед звонком."}
         </p>
 
         <form className="entry__form" onSubmit={submit}>
@@ -51,18 +52,8 @@ export function LandingPage({ inviteRoomId, onEnterRoom }) {
               setDisplayName(event.target.value);
               setError("");
             }}
-            placeholder="Алекс"
+            placeholder="Максим (опционально)"
           />
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={() => {
-              setDisplayName(createGuestName());
-              setError("");
-            }}
-          >
-            Сгенерировать имя
-          </button>
           {error ? <div className="form-error">{error}</div> : null}
           <button className="primary-button" type="submit">
             {isInvite ? "Войти" : "Создать комнату"}

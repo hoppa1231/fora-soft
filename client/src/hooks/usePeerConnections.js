@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const ICE_SERVERS = [{ urls: "stun:stun.l.google.com:19302" }];
+const ICE_QUEUE_LIMIT = 32;
 
 function streamTrackByKind(stream, kind) {
   return kind === "audio" ? stream?.getAudioTracks()[0] ?? null : stream?.getVideoTracks()[0] ?? null;
@@ -12,6 +13,51 @@ function localSenders(peer) {
   }
 
   return peer.__localSenders;
+}
+
+function queuedIceCandidates(peer) {
+  if (!peer.__pendingIceCandidates) {
+    peer.__pendingIceCandidates = [];
+  }
+
+  return peer.__pendingIceCandidates;
+}
+
+async function addOrQueueIceCandidate(peer, payload) {
+  if (!payload || peer.signalingState === "closed") {
+    return;
+  }
+
+  const candidate = new RTCIceCandidate(payload);
+  if (!peer.remoteDescription) {
+    const queue = queuedIceCandidates(peer);
+    queue.push(candidate);
+
+    if (queue.length > ICE_QUEUE_LIMIT) {
+      queue.shift();
+    }
+
+    return;
+  }
+
+  await peer.addIceCandidate(candidate);
+}
+
+async function flushQueuedIceCandidates(peer) {
+  if (!peer.remoteDescription || peer.signalingState === "closed") {
+    return;
+  }
+
+  const queue = queuedIceCandidates(peer);
+  const candidates = queue.splice(0);
+
+  for (const candidate of candidates) {
+    try {
+      await peer.addIceCandidate(candidate);
+    } catch {
+      // A stale queued candidate should not abort the SDP handshake.
+    }
+  }
 }
 
 function senderByKind(peer, kind) {
@@ -218,6 +264,7 @@ export function usePeerConnections({
       if (signal.type === "offer") {
         Promise.resolve()
           .then(() => peer.setRemoteDescription(new RTCSessionDescription(signal.payload)))
+          .then(() => flushQueuedIceCandidates(peer))
           .then(() => syncLocalTracks(peer, signal.from, localStreamRef.current, sendSignal))
           .then(() => peer.createAnswer())
           .then((answer) => peer.setLocalDescription(answer).then(() => answer))
@@ -233,21 +280,40 @@ export function usePeerConnections({
       }
 
       if (signal.type === "answer") {
-        peer.setRemoteDescription(new RTCSessionDescription(signal.payload)).catch(() => {
-          setConnectionIssues((items) => ({
-            ...items,
-            [signal.from]: "Не удалось применить WebRTC-ответ"
-          }));
-        });
+        Promise.resolve()
+          .then(() => peer.setRemoteDescription(new RTCSessionDescription(signal.payload)))
+          .then(() => flushQueuedIceCandidates(peer))
+          .then(() => {
+            setConnectionIssues((items) => {
+              const next = { ...items };
+              delete next[signal.from];
+              return next;
+            });
+          })
+          .catch(() => {
+            setConnectionIssues((items) => ({
+              ...items,
+              [signal.from]: "Не удалось применить WebRTC-ответ"
+            }));
+          });
       }
 
       if (signal.type === "ice-candidate" && signal.payload) {
-        peer.addIceCandidate(new RTCIceCandidate(signal.payload)).catch(() => {
-          setConnectionIssues((items) => ({
-            ...items,
-            [signal.from]: "Не удалось добавить ICE-кандидат"
-          }));
-        });
+        addOrQueueIceCandidate(peer, signal.payload)
+          .then(() => {
+            setConnectionIssues((items) => {
+              if (!items[signal.from]) return items;
+              const next = { ...items };
+              delete next[signal.from];
+              return next;
+            });
+          })
+          .catch(() => {
+            setConnectionIssues((items) => ({
+              ...items,
+              [signal.from]: "Не удалось добавить ICE-кандидат"
+            }));
+          });
       }
     }
   }, [consumeSignal, createPeer, joined, removePeer, sendSignal, signals]);
