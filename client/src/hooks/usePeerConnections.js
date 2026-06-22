@@ -6,14 +6,28 @@ function streamTrackByKind(stream, kind) {
   return kind === "audio" ? stream?.getAudioTracks()[0] ?? null : stream?.getVideoTracks()[0] ?? null;
 }
 
-function senderByKind(peer, kind) {
-  const directSender = peer.getSenders().find((sender) => sender.track?.kind === kind);
-  if (directSender) return directSender;
+function localSenders(peer) {
+  if (!peer.__localSenders) {
+    peer.__localSenders = {};
+  }
 
-  return peer
+  return peer.__localSenders;
+}
+
+function senderByKind(peer, kind) {
+  const senders = localSenders(peer);
+  if (senders[kind]) return senders[kind];
+
+  const sender = peer
     .getTransceivers()
-    .find((transceiver) => transceiver.receiver.track?.kind === kind)
-    ?.sender ?? null;
+    .find((transceiver) => transceiver.receiver.track?.kind === kind || transceiver.sender.track?.kind === kind)
+    ?.sender;
+
+  if (sender) {
+    senders[kind] = sender;
+  }
+
+  return sender ?? null;
 }
 
 async function renegotiatePeer(peer, participant, sendSignal) {
@@ -24,6 +38,36 @@ async function renegotiatePeer(peer, participant, sendSignal) {
   const offer = await peer.createOffer();
   await peer.setLocalDescription(offer);
   sendSignal({ to: participant, type: "offer", payload: offer });
+}
+
+async function syncLocalTracks(peer, participant, localStream, sendSignal, { ensureTransceivers = false, renegotiateOnAdd = false } = {}) {
+  let needsRenegotiation = false;
+  const senders = localSenders(peer);
+
+  for (const kind of ["audio", "video"]) {
+    const nextTrack = streamTrackByKind(localStream, kind);
+    let sender = senderByKind(peer, kind);
+
+    if (!sender && ensureTransceivers) {
+      sender = peer.addTransceiver(kind, { direction: "sendrecv" }).sender;
+      senders[kind] = sender;
+      needsRenegotiation = true;
+    }
+
+    if (!sender && nextTrack && localStream) {
+      senders[kind] = peer.addTrack(nextTrack, localStream);
+      needsRenegotiation = true;
+      continue;
+    }
+
+    if (sender && sender.track !== nextTrack) {
+      await sender.replaceTrack(nextTrack);
+    }
+  }
+
+  if (needsRenegotiation && renegotiateOnAdd) {
+    await renegotiatePeer(peer, participant, sendSignal);
+  }
 }
 
 export function usePeerConnections({
@@ -37,8 +81,13 @@ export function usePeerConnections({
 }) {
   const peersRef = useRef(new Map());
   const offeredRef = useRef(new Set());
+  const localStreamRef = useRef(localStream);
   const [remoteStreams, setRemoteStreams] = useState({});
   const [connectionIssues, setConnectionIssues] = useState({});
+
+  useEffect(() => {
+    localStreamRef.current = localStream;
+  }, [localStream]);
 
   const updateRemoteStream = useCallback((participant, stream) => {
     setRemoteStreams((items) => ({ ...items, [participant]: stream }));
@@ -73,12 +122,6 @@ export function usePeerConnections({
     if (current) return current;
 
     const peer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-
-    for (const kind of ["audio", "video"]) {
-      const track = streamTrackByKind(localStream, kind);
-      const transceiver = peer.addTransceiver(kind, { direction: "sendrecv" });
-      transceiver.sender.replaceTrack(track);
-    }
 
     peer.onicecandidate = (event) => {
       if (event.candidate) {
@@ -119,33 +162,16 @@ export function usePeerConnections({
 
     peersRef.current.set(participant, peer);
     return peer;
-  }, [localStream, refreshRemoteStream, sendSignal, updateRemoteStream]);
+  }, [refreshRemoteStream, sendSignal, updateRemoteStream]);
 
   useEffect(() => {
     for (const [participant, peer] of peersRef.current.entries()) {
-      let needsRenegotiation = false;
-
-      for (const kind of ["audio", "video"]) {
-        const nextTrack = streamTrackByKind(localStream, kind);
-        const sender = senderByKind(peer, kind);
-        const previousTrack = sender?.track ?? null;
-
-        if (sender) {
-          sender.replaceTrack(nextTrack);
-          if (kind === "video" && previousTrack !== nextTrack) {
-            needsRenegotiation = true;
-          }
-        }
-      }
-
-      if (needsRenegotiation) {
-        renegotiatePeer(peer, participant, sendSignal).catch(() => {
+      syncLocalTracks(peer, participant, localStream, sendSignal, { renegotiateOnAdd: true }).catch(() => {
           setConnectionIssues((items) => ({
             ...items,
             [participant]: "Не удалось обновить видеопоток"
           }));
-        });
-      }
+      });
     }
   }, [localStream, sendSignal]);
 
@@ -159,8 +185,8 @@ export function usePeerConnections({
 
       offeredRef.current.add(participant.id);
       const peer = createPeer(participant.id);
-      peer
-        .createOffer()
+      syncLocalTracks(peer, participant.id, localStreamRef.current, sendSignal, { ensureTransceivers: true })
+        .then(() => peer.createOffer())
         .then((offer) => peer.setLocalDescription(offer).then(() => offer))
         .then((offer) => {
           sendSignal({ to: participant.id, type: "offer", payload: offer });
@@ -192,6 +218,7 @@ export function usePeerConnections({
       if (signal.type === "offer") {
         Promise.resolve()
           .then(() => peer.setRemoteDescription(new RTCSessionDescription(signal.payload)))
+          .then(() => syncLocalTracks(peer, signal.from, localStreamRef.current, sendSignal))
           .then(() => peer.createAnswer())
           .then((answer) => peer.setLocalDescription(answer).then(() => answer))
           .then((answer) => {

@@ -1,9 +1,9 @@
 import { Video } from "lucide-react";
 import { useState } from "react";
-import { createRoomId, isValidRoomId, validateDisplayName } from "../utils/validation.js";
+import { createGuestName, createRoomId, isValidRoomId, validateDisplayName } from "../utils/validation.js";
 
 export function LandingPage({ inviteRoomId, onEnterRoom }) {
-  const [displayName, setDisplayName] = useState("");
+  const [displayName, setDisplayName] = useState(() => createGuestName());
   const [error, setError] = useState("");
   const isInvite = Boolean(inviteRoomId);
 
@@ -36,8 +36,8 @@ export function LandingPage({ inviteRoomId, onEnterRoom }) {
         <h1 id="entry-title">Видеочат-комната</h1>
         <p>
           {isInvite
-            ? "Введите имя, чтобы присоединиться к комнате."
-            : "Введите имя и создайте ссылку для звонка до четырёх участников."}
+            ? "Имя уже готово, можно сразу присоединиться."
+            : "Имя уже готово, можно сразу создать ссылку для звонка до четырёх участников."}
         </p>
 
         <form className="entry__form" onSubmit={submit}>
@@ -53,6 +53,16 @@ export function LandingPage({ inviteRoomId, onEnterRoom }) {
             }}
             placeholder="Алекс"
           />
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => {
+              setDisplayName(createGuestName());
+              setError("");
+            }}
+          >
+            Сгенерировать имя
+          </button>
           {error ? <div className="form-error">{error}</div> : null}
           <button className="primary-button" type="submit">
             {isInvite ? "Войти" : "Создать комнату"}

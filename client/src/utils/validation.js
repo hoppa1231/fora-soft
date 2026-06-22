@@ -48,6 +48,14 @@ export function createRoomId() {
   return Math.random().toString(36).slice(2, 12);
 }
 
+export function createGuestName() {
+  const value = globalThis.crypto?.getRandomValues
+    ? globalThis.crypto.getRandomValues(new Uint16Array(1))[0]
+    : Math.floor(Math.random() * 65535);
+
+  return `Гость ${String((value % 9000) + 1000)}`;
+}
+
 export function formatLocalTime(timestamp) {
   return new Intl.DateTimeFormat("ru-RU", {
     hour: "2-digit",

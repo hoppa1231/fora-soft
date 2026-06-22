@@ -48,6 +48,42 @@ export function PreJoinPage({ displayName, roomId, onBack, onJoin }) {
           <ParticipantTile participant={previewParticipant} stream={localMedia.stream} />
         </div>
 
+        {(localMedia.audioInputs.length > 1 || localMedia.videoInputs.length > 1) ? (
+          <div className="device-selectors" aria-label="Выбор устройств">
+            {localMedia.audioInputs.length > 1 ? (
+              <label>
+                Микрофон
+                <select
+                  value={localMedia.selectedAudioDeviceId}
+                  onChange={(event) => localMedia.selectAudioDevice(event.target.value)}
+                >
+                  {localMedia.audioInputs.map((device, index) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `Микрофон ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
+            {localMedia.videoInputs.length > 1 ? (
+              <label>
+                Камера
+                <select
+                  value={localMedia.selectedVideoDeviceId}
+                  onChange={(event) => localMedia.selectVideoDevice(event.target.value)}
+                >
+                  {localMedia.videoInputs.map((device, index) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `Камера ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="prejoin__controls" aria-label="Настройки перед входом">
           <button className="icon-button" type="button" onClick={localMedia.toggleAudio} title={localMedia.mediaState.audioEnabled ? "Выключить микрофон" : "Включить микрофон"}>
             {localMedia.mediaState.audioEnabled ? <Mic aria-hidden="true" strokeWidth={1.75} /> : <MicOff aria-hidden="true" strokeWidth={1.75} />}
