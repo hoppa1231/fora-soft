@@ -33,13 +33,15 @@ function createMirroredCameraTrack(sourceTrack) {
 
   canvas.width = width;
   canvas.height = height;
+  video.autoplay = true;
   video.muted = true;
   video.playsInline = true;
   video.srcObject = sourceStream;
 
   const outputStream = canvas.captureStream(frameRate);
   const outputTrack = outputStream.getVideoTracks()[0];
-  let frameId = 0;
+  const drawIntervalMs = Math.round(1000 / Math.min(Math.max(frameRate, 10), 30));
+  let intervalId = 0;
   let stopped = false;
 
   const drawFrame = () => {
@@ -55,12 +57,12 @@ function createMirroredCameraTrack(sourceTrack) {
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       context.restore();
     }
-
-    frameId = window.requestAnimationFrame(drawFrame);
   };
 
-  video.play().catch(() => {});
-  frameId = window.requestAnimationFrame(drawFrame);
+  intervalId = window.setInterval(drawFrame, drawIntervalMs);
+  video.addEventListener("loadeddata", drawFrame);
+  video.addEventListener("playing", drawFrame);
+  video.play().then(drawFrame).catch(() => {});
   outputTrack.contentHint = sourceTrack.contentHint || "motion";
   sourceTrack.onended = () => outputTrack.stop();
 
@@ -68,7 +70,9 @@ function createMirroredCameraTrack(sourceTrack) {
     track: outputTrack,
     cleanup: () => {
       stopped = true;
-      window.cancelAnimationFrame(frameId);
+      window.clearInterval(intervalId);
+      video.removeEventListener("loadeddata", drawFrame);
+      video.removeEventListener("playing", drawFrame);
       video.pause();
       video.srcObject = null;
       sourceTrack.stop();

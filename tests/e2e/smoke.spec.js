@@ -20,6 +20,31 @@ async function joinRoom(page, url, name) {
   await expect(page.getByText(`${name} (вы)`)).toBeVisible();
 }
 
+async function expectVideoHasVisibleFrame(videoLocator) {
+  await expect.poll(async () => videoLocator.evaluate((video) => {
+    if (!video.srcObject || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth || !video.videoHeight) {
+      return false;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 80;
+    canvas.height = 45;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) return false;
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+
+    for (let index = 0; index < pixels.length; index += 4) {
+      if (pixels[index] > 12 || pixels[index + 1] > 12 || pixels[index + 2] > 12) {
+        return true;
+      }
+    }
+
+    return false;
+  }), { timeout: 8_000 }).toBe(true);
+}
+
 test("creates room, joins second participant and exchanges chat message", async ({ browser }) => {
   const first = await browser.newPage();
   const roomUrl = await createRoom(first);
@@ -42,6 +67,14 @@ test("creates room, joins second participant and exchanges chat message", async 
   await first.getByTitle("Включить камеру").click();
   await expect(first.getByTitle("Выключить камеру")).toBeVisible();
   await expect(second.locator(".room-main__stage video")).toHaveCount(2);
+  await expectVideoHasVisibleFrame(second.locator(".participant-tile").filter({ hasText: "Алекс" }).locator("video"));
+
+  await first.getByTitle("Выключить камеру").click();
+  await expect(first.getByTitle("Включить камеру")).toBeVisible();
+  await first.getByTitle("Включить камеру").click();
+  await expect(first.getByTitle("Выключить камеру")).toBeVisible();
+  await expect(second.locator(".room-main__stage video")).toHaveCount(2);
+  await expectVideoHasVisibleFrame(second.locator(".participant-tile").filter({ hasText: "Алекс" }).locator("video"));
 
   await first.getByTitle("Транслировать экран").click();
   await expect(first.getByTitle("Остановить трансляцию экрана")).toBeVisible();

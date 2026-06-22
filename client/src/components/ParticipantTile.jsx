@@ -10,8 +10,9 @@ export function ParticipantTile({ participant, stream }) {
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.srcObject = stream ?? null;
+      videoRef.current.play().catch(() => {});
     }
-  }, [stream]);
+  }, [hasVideo, stream]);
 
   useEffect(() => {
     const audioTrack = stream?.getAudioTracks().find((track) => track.readyState === "live");
