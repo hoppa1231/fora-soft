@@ -30,6 +30,10 @@ test("creates room, joins second participant and exchanges chat message", async 
   await expect(first.locator(".room-main__stage video")).toHaveCount(2);
   await expect(second.locator(".room-main__stage video")).toHaveCount(2);
 
+  await first.getByTitle("Транслировать экран").click();
+  await expect(first.getByTitle("Остановить трансляцию экрана")).toBeVisible();
+  await expect(second.locator(".room-main__stage video")).toHaveCount(2);
+
   await first.getByLabel("Сообщение").fill("Привет");
   await first.getByTitle("Отправить").click();
 

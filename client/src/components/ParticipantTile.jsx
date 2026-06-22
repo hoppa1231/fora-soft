@@ -6,7 +6,6 @@ export function ParticipantTile({ participant, stream }) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const hasVideo = Boolean(stream?.getVideoTracks().some((track) => track.readyState === "live"));
   const hasBadges = !participant.audioEnabled || !participant.videoEnabled;
-  const mirrorVideo = participant.isLocal && participant.mirrorVideo !== false;
 
   useEffect(() => {
     if (videoRef.current) {
@@ -86,7 +85,7 @@ export function ParticipantTile({ participant, stream }) {
           autoPlay
           playsInline
           muted={participant.isLocal}
-          className={`participant-tile__video ${mirrorVideo ? "participant-tile__video--mirrored" : ""}`}
+          className="participant-tile__video"
         />
       ) : (
         <div className="participant-tile__placeholder">

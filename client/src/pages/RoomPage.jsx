@@ -54,15 +54,8 @@ export function RoomPage({ roomId, displayName, initialMediaPreferences, onLeave
     displayName,
     audioEnabled: localMedia.mediaState.audioEnabled,
     videoEnabled: localMedia.mediaState.videoEnabled,
-    isLocal: true,
-    mirrorVideo: !localMedia.screenSharing
-  }), [
-    displayName,
-    localMedia.mediaState.audioEnabled,
-    localMedia.mediaState.videoEnabled,
-    localMedia.screenSharing,
-    socketRoom.participantId
-  ]);
+    isLocal: true
+  }), [displayName, localMedia.mediaState.audioEnabled, localMedia.mediaState.videoEnabled, socketRoom.participantId]);
 
   const participants = useMemo(() => {
     const remoteParticipants = socketRoom.participants.filter((participant) => participant.id !== socketRoom.participantId);

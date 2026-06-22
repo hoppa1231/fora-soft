@@ -103,17 +103,22 @@ async function syncLocalTracks(peer, participant, localStream, sendSignal, { ens
 
   for (const kind of ["audio", "video"]) {
     const nextTrack = streamTrackByKind(localStream, kind);
-    const transceiver = transceiverByKind(peer, kind);
+    let transceiver = transceiverByKind(peer, kind);
     let sender = senderByKind(peer, kind);
 
     if (!sender && ensureTransceivers) {
-      sender = peer.addTransceiver(kind, { direction: "sendrecv" }).sender;
+      transceiver = peer.addTransceiver(kind, { direction: "sendrecv" });
+      sender = transceiver.sender;
       senders[kind] = sender;
       needsRenegotiation = true;
     }
 
     if (transceiver && transceiver.direction !== "stopped") {
-      transceiver.direction = nextTrack ? "sendrecv" : "recvonly";
+      const nextDirection = nextTrack ? "sendrecv" : "recvonly";
+      if (transceiver.direction !== nextDirection) {
+        transceiver.direction = nextDirection;
+        needsRenegotiation = true;
+      }
     }
 
     if (!sender && nextTrack && localStream) {
