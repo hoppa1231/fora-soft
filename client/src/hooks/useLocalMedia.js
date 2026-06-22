@@ -89,37 +89,57 @@ function createMockCameraTrack() {
   canvas.height = 540;
 
   const draw = () => {
-    context.fillStyle = "#0b0f0d";
+    const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, "#101713");
+    gradient.addColorStop(1, "#1b2621");
+    context.fillStyle = gradient;
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    context.fillStyle = "#17221d";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
-    context.strokeStyle = "rgba(255, 255, 255, 0.06)";
-    context.lineWidth = 8;
-    for (let index = -canvas.height; index < canvas.width; index += 44) {
-      context.beginPath();
-      context.moveTo(index, 0);
-      context.lineTo(index + canvas.height, canvas.height);
-      context.stroke();
+    context.fillStyle = "rgba(255, 255, 255, 0.02)";
+    for (let row = 0; row < canvas.height; row += 28) {
+      context.fillRect(0, row, canvas.width, 1);
     }
 
-    context.fillStyle = "#0f1512";
-    context.fillRect(54, 54, canvas.width - 108, canvas.height - 108);
+    context.fillStyle = "rgba(255, 255, 255, 0.03)";
+    for (let col = 0; col < canvas.width; col += 44) {
+      context.fillRect(col, 0, 1, canvas.height);
+    }
 
-    context.strokeStyle = "#5f736b";
-    context.lineWidth = 10;
-    context.strokeRect(54, 54, canvas.width - 108, canvas.height - 108);
+    context.fillStyle = "#0d1310";
+    context.fillRect(52, 52, canvas.width - 104, canvas.height - 104);
 
-    context.fillStyle = "#d7e4dc";
-    context.font = "600 40px Arial, sans-serif";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText("Камера выключена", canvas.width / 2, canvas.height / 2 - 10);
+    context.strokeStyle = "rgba(145, 167, 157, 0.5)";
+    context.lineWidth = 8;
+    context.strokeRect(52, 52, canvas.width - 104, canvas.height - 104);
 
-    context.fillStyle = "#91a79d";
-    context.font = "400 22px Arial, sans-serif";
-    context.fillText("Показываем заглушку вместо последнего кадра", canvas.width / 2, canvas.height / 2 + 34);
+    const centerX = canvas.width / 2;
+    const headY = canvas.height * 0.43;
+
+    context.fillStyle = "#d5e1d8";
+    context.beginPath();
+    context.arc(centerX, headY, 52, 0, Math.PI * 2);
+    context.fill();
+
+    context.fillStyle = "#d5e1d8";
+    context.beginPath();
+    context.moveTo(centerX - 118, canvas.height * 0.77);
+    context.quadraticCurveTo(centerX - 88, canvas.height * 0.56, centerX, canvas.height * 0.56);
+    context.quadraticCurveTo(centerX + 88, canvas.height * 0.56, centerX + 118, canvas.height * 0.77);
+    context.lineTo(centerX + 118, canvas.height * 0.84);
+    context.lineTo(centerX - 118, canvas.height * 0.84);
+    context.closePath();
+    context.fill();
+
+    context.fillStyle = "#0d1310";
+    context.beginPath();
+    context.arc(centerX, headY, 22, 0, Math.PI * 2);
+    context.fill();
+
+    context.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    context.lineWidth = 12;
+    context.beginPath();
+    context.arc(centerX, headY, 72, 0.12 * Math.PI, 1.88 * Math.PI);
+    context.stroke();
   };
 
   draw();
