@@ -5,6 +5,7 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? "/";
 
 export function useSocketRoom({ roomId, displayName, enabled, initialMediaState }) {
   const socketRef = useRef(null);
+  const initialMediaStateRef = useRef(initialMediaState);
   const [status, setStatus] = useState(enabled ? "connecting" : "idle");
   const [error, setError] = useState("");
   const [participantId, setParticipantId] = useState(null);
@@ -13,6 +14,12 @@ export function useSocketRoom({ roomId, displayName, enabled, initialMediaState 
   const [messages, setMessages] = useState([]);
   const [signals, setSignals] = useState([]);
   const [soundEffects, setSoundEffects] = useState([]);
+
+  useEffect(() => {
+    if (!socketRef.current) {
+      initialMediaStateRef.current = initialMediaState;
+    }
+  }, [initialMediaState]);
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -31,8 +38,8 @@ export function useSocketRoom({ roomId, displayName, enabled, initialMediaState 
         {
           roomId,
           displayName,
-          audioEnabled: initialMediaState.audioEnabled,
-          videoEnabled: initialMediaState.videoEnabled
+          audioEnabled: initialMediaStateRef.current.audioEnabled,
+          videoEnabled: initialMediaStateRef.current.videoEnabled
         },
         (response) => {
           if (!response?.ok) {
@@ -86,7 +93,7 @@ export function useSocketRoom({ roomId, displayName, enabled, initialMediaState 
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [displayName, enabled, initialMediaState.audioEnabled, initialMediaState.videoEnabled, roomId]);
+  }, [displayName, enabled, roomId]);
 
   const sendMessage = useCallback((text) => {
     socketRef.current?.emit("chat-message", { roomId, text });

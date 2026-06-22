@@ -30,9 +30,29 @@ test("creates room, joins second participant and exchanges chat message", async 
   await expect(first.locator(".room-main__stage video")).toHaveCount(2);
   await expect(second.locator(".room-main__stage video")).toHaveCount(2);
 
+  await first.getByTitle("Выключить микрофон").click();
+  await expect(first.getByTitle("Включить микрофон")).toBeVisible();
+  await first.getByTitle("Включить микрофон").click();
+  await expect(first.getByTitle("Выключить микрофон")).toBeVisible();
+  await expect(second.locator(".room-main__stage video")).toHaveCount(2);
+
+  await first.getByTitle("Выключить камеру").click();
+  await expect(first.getByTitle("Включить камеру")).toBeVisible();
+  await first.getByTitle("Включить камеру").click();
+  await expect(first.getByTitle("Выключить камеру")).toBeVisible();
+  await expect(second.locator(".room-main__stage video")).toHaveCount(2);
+
   await first.getByTitle("Транслировать экран").click();
   await expect(first.getByTitle("Остановить трансляцию экрана")).toBeVisible();
   await expect(second.locator(".room-main__stage video")).toHaveCount(2);
+  await first.getByTitle("Остановить трансляцию экрана").click();
+  await expect(first.getByTitle("Транслировать экран")).toBeVisible();
+  await first.getByTitle("Транслировать экран").click();
+  await expect(first.getByTitle("Остановить трансляцию экрана")).toBeVisible();
+  await expect(second.locator(".room-main__stage video")).toHaveCount(2);
+
+  await expect(second.getByText("Алекс покинул комнату")).toHaveCount(0);
+  await expect(second.getByText("Алекс присоединился к комнате")).toHaveCount(1);
 
   await first.getByLabel("Сообщение").fill("Привет");
   await first.getByTitle("Отправить").click();
