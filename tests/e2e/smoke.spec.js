@@ -137,13 +137,33 @@ test("toggles chat panel from controls", async ({ browser }) => {
   await page.close();
 });
 
-test("keeps room controls and video stage inside mobile viewport", async ({ browser }) => {
+test("keeps all participants inside mobile viewport", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await createRoom(page, "Мобильная");
+  const roomUrl = await createRoom(page, "Мобильная");
+  const guests = [];
+
+  for (let index = 2; index <= 4; index += 1) {
+    const guest = await browser.newPage();
+    guests.push(guest);
+    await joinRoom(guest, roomUrl, `User ${index}`);
+  }
+
+  await expect(page.locator(".participant-tile")).toHaveCount(4);
 
   const metrics = await page.evaluate(() => {
     const controls = document.querySelector(".controls").getBoundingClientRect();
     const stage = document.querySelector(".room-main__stage").getBoundingClientRect();
+    const tiles = [...document.querySelectorAll(".participant-tile")].map((tile) => {
+      const rect = tile.getBoundingClientRect();
+      return {
+        bottom: rect.bottom,
+        height: rect.height,
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        width: rect.width
+      };
+    });
 
     return {
       controlsBottom: controls.bottom,
@@ -151,7 +171,9 @@ test("keeps room controls and video stage inside mobile viewport", async ({ brow
       documentHeight: document.documentElement.scrollHeight,
       height: window.innerHeight,
       stageBottom: stage.bottom,
-      stageTop: stage.top
+      stageTop: stage.top,
+      tiles,
+      width: window.innerWidth
     };
   });
 
@@ -159,6 +181,16 @@ test("keeps room controls and video stage inside mobile viewport", async ({ brow
   expect(metrics.stageBottom).toBeLessThanOrEqual(metrics.controlsTop);
   expect(metrics.controlsBottom).toBeLessThanOrEqual(metrics.height);
   expect(metrics.documentHeight).toBeLessThanOrEqual(metrics.height + 1);
+  expect(metrics.tiles).toHaveLength(4);
 
-  await page.close();
+  for (const tile of metrics.tiles) {
+    expect(tile.top).toBeGreaterThanOrEqual(metrics.stageTop);
+    expect(tile.bottom).toBeLessThanOrEqual(metrics.stageBottom);
+    expect(tile.left).toBeGreaterThanOrEqual(0);
+    expect(tile.right).toBeLessThanOrEqual(metrics.width);
+    expect(tile.width).toBeGreaterThan(100);
+    expect(tile.height).toBeGreaterThan(80);
+  }
+
+  await Promise.all([page, ...guests].map((item) => item.close()));
 });
