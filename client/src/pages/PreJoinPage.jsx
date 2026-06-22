@@ -11,7 +11,8 @@ export function PreJoinPage({ displayName, roomId, onBack, onJoin }) {
     displayName,
     audioEnabled: localMedia.mediaState.audioEnabled,
     videoEnabled: localMedia.mediaState.videoEnabled,
-    isLocal: true
+    isLocal: true,
+    mirrorVideo: true
   };
 
   const join = () => {

@@ -357,6 +357,10 @@ button {
   background: #080b0a;
 }
 
+.participant-tile__video--mirrored {
+  transform: scaleX(-1);
+}
+
 .participant-tile__placeholder {
   display: grid;
   place-items: center;

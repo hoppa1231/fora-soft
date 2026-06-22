@@ -23,6 +23,14 @@ function queuedIceCandidates(peer) {
   return peer.__pendingIceCandidates;
 }
 
+function remoteMediaStream(peer) {
+  if (!peer.__remoteMediaStream) {
+    peer.__remoteMediaStream = new MediaStream();
+  }
+
+  return peer.__remoteMediaStream;
+}
+
 async function addOrQueueIceCandidate(peer, payload) {
   if (!payload || peer.signalingState === "closed") {
     return;
@@ -64,16 +72,19 @@ function senderByKind(peer, kind) {
   const senders = localSenders(peer);
   if (senders[kind]) return senders[kind];
 
-  const sender = peer
-    .getTransceivers()
-    .find((transceiver) => transceiver.receiver.track?.kind === kind || transceiver.sender.track?.kind === kind)
-    ?.sender;
+  const sender = transceiverByKind(peer, kind)?.sender;
 
   if (sender) {
     senders[kind] = sender;
   }
 
   return sender ?? null;
+}
+
+function transceiverByKind(peer, kind) {
+  return peer
+    .getTransceivers()
+    .find((transceiver) => transceiver.receiver.track?.kind === kind || transceiver.sender.track?.kind === kind) ?? null;
 }
 
 async function renegotiatePeer(peer, participant, sendSignal) {
@@ -92,12 +103,17 @@ async function syncLocalTracks(peer, participant, localStream, sendSignal, { ens
 
   for (const kind of ["audio", "video"]) {
     const nextTrack = streamTrackByKind(localStream, kind);
+    const transceiver = transceiverByKind(peer, kind);
     let sender = senderByKind(peer, kind);
 
     if (!sender && ensureTransceivers) {
       sender = peer.addTransceiver(kind, { direction: "sendrecv" }).sender;
       senders[kind] = sender;
       needsRenegotiation = true;
+    }
+
+    if (transceiver && transceiver.direction !== "stopped") {
+      transceiver.direction = nextTrack ? "sendrecv" : "recvonly";
     }
 
     if (!sender && nextTrack && localStream) {
@@ -180,15 +196,18 @@ export function usePeerConnections({
     };
 
     peer.ontrack = (event) => {
-      const [stream] = event.streams;
-      if (stream) {
-        updateRemoteStream(participant, stream);
-        event.track.onunmute = () => refreshRemoteStream(participant);
-        event.track.onmute = () => refreshRemoteStream(participant);
-        event.track.onended = () => refreshRemoteStream(participant);
-        stream.onaddtrack = () => refreshRemoteStream(participant);
-        stream.onremovetrack = () => refreshRemoteStream(participant);
+      const stream = event.streams[0] ?? remoteMediaStream(peer);
+
+      if (!stream.getTracks().some((track) => track.id === event.track.id)) {
+        stream.addTrack(event.track);
       }
+
+      updateRemoteStream(participant, stream);
+      event.track.onunmute = () => refreshRemoteStream(participant);
+      event.track.onmute = () => refreshRemoteStream(participant);
+      event.track.onended = () => refreshRemoteStream(participant);
+      stream.onaddtrack = () => refreshRemoteStream(participant);
+      stream.onremovetrack = () => refreshRemoteStream(participant);
     };
 
     peer.onconnectionstatechange = () => {
