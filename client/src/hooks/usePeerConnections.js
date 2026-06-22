@@ -89,9 +89,11 @@ function transceiverByKind(peer, kind) {
 
 async function renegotiatePeer(peer, participant, sendSignal) {
   if (peer.signalingState !== "stable") {
+    peer.__pendingRenegotiation = true;
     return;
   }
 
+  peer.__pendingRenegotiation = false;
   const offer = await peer.createOffer();
   await peer.setLocalDescription(offer);
   sendSignal({ to: participant, type: "offer", payload: offer });
@@ -128,7 +130,12 @@ async function syncLocalTracks(peer, participant, localStream, sendSignal, { ens
     }
 
     if (sender && sender.track !== nextTrack) {
+      const previousTrack = sender.track;
       await sender.replaceTrack(nextTrack);
+
+      if (kind === "video" && previousTrack !== nextTrack) {
+        needsRenegotiation = true;
+      }
     }
   }
 
@@ -226,6 +233,17 @@ export function usePeerConnections({
           const next = { ...items };
           delete next[participant];
           return next;
+        });
+      }
+    };
+
+    peer.onsignalingstatechange = () => {
+      if (peer.signalingState === "stable" && peer.__pendingRenegotiation) {
+        renegotiatePeer(peer, participant, sendSignal).catch(() => {
+          setConnectionIssues((items) => ({
+            ...items,
+            [participant]: "Не удалось обновить видеопоток"
+          }));
         });
       }
     };
