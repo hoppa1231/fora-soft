@@ -1,17 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 function supportsWebRtc() {
   return Boolean(window.RTCPeerConnection && navigator.mediaDevices?.getUserMedia);
-}
-
-function mediaStateFromStream(stream) {
-  const audioTrack = stream?.getAudioTracks()[0] ?? null;
-  const videoTrack = stream?.getVideoTracks()[0] ?? null;
-
-  return {
-    audioEnabled: Boolean(audioTrack && audioTrack.enabled && audioTrack.readyState === "live"),
-    videoEnabled: Boolean(videoTrack && videoTrack.readyState === "live")
-  };
 }
 
 function cloneStreamWithTracks(tracks) {
@@ -87,11 +77,71 @@ function createMirroredCameraTrack(sourceTrack) {
   };
 }
 
+function createMockCameraTrack() {
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  if (!context || !canvas.captureStream) {
+    throw new Error("Canvas capture unavailable");
+  }
+
+  canvas.width = 960;
+  canvas.height = 540;
+
+  const draw = () => {
+    context.fillStyle = "#0b0f0d";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.fillStyle = "#17221d";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.strokeStyle = "rgba(255, 255, 255, 0.06)";
+    context.lineWidth = 8;
+    for (let index = -canvas.height; index < canvas.width; index += 44) {
+      context.beginPath();
+      context.moveTo(index, 0);
+      context.lineTo(index + canvas.height, canvas.height);
+      context.stroke();
+    }
+
+    context.fillStyle = "#0f1512";
+    context.fillRect(54, 54, canvas.width - 108, canvas.height - 108);
+
+    context.strokeStyle = "#5f736b";
+    context.lineWidth = 10;
+    context.strokeRect(54, 54, canvas.width - 108, canvas.height - 108);
+
+    context.fillStyle = "#d7e4dc";
+    context.font = "600 40px Arial, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("Камера выключена", canvas.width / 2, canvas.height / 2 - 10);
+
+    context.fillStyle = "#91a79d";
+    context.font = "400 22px Arial, sans-serif";
+    context.fillText("Показываем заглушку вместо последнего кадра", canvas.width / 2, canvas.height / 2 + 34);
+  };
+
+  draw();
+  const outputStream = canvas.captureStream(1);
+  const outputTrack = outputStream.getVideoTracks()[0];
+  outputTrack.contentHint = "detail";
+
+  return {
+    track: outputTrack,
+    cleanup: () => outputTrack.stop()
+  };
+}
+
 export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled = true } = {}) {
   const [stream, setStream] = useState(null);
   const [status, setStatus] = useState("requesting");
   const [messages, setMessages] = useState([]);
   const [screenSharing, setScreenSharing] = useState(false);
+  const [mediaState, setMediaState] = useState({
+    audioEnabled: initialAudioEnabled,
+    videoEnabled: initialVideoEnabled
+  });
   const [audioInputs, setAudioInputs] = useState([]);
   const [videoInputs, setVideoInputs] = useState([]);
   const [selectedAudioDeviceId, setSelectedAudioDeviceId] = useState("");
@@ -99,10 +149,15 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
   const streamRef = useRef(null);
   const screenTrackRef = useRef(null);
   const videoTrackCleanupsRef = useRef(new Map());
+  const cameraEnabledRef = useRef(initialVideoEnabled);
 
   const setManagedStream = useCallback((nextStream) => {
     streamRef.current = nextStream;
     setStream(nextStream);
+  }, []);
+
+  const syncMediaState = useCallback((patch) => {
+    setMediaState((current) => ({ ...current, ...patch }));
   }, []);
 
   const replaceVideoTrack = useCallback((nextTrack) => {
@@ -136,12 +191,19 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
       if (!current) return;
       const liveTracks = current.getTracks().filter((item) => item !== track && item.readyState === "live");
       setManagedStream(cloneStreamWithTracks(liveTracks));
+      if (track.kind === "audio") {
+        syncMediaState({ audioEnabled: false });
+      }
+      if (track.kind === "video" && !options.screen) {
+        cameraEnabledRef.current = false;
+        syncMediaState({ videoEnabled: false });
+      }
       if (options.screen) {
         screenTrackRef.current = null;
         setScreenSharing(false);
       }
     };
-  }, [setManagedStream]);
+  }, [setManagedStream, syncMediaState]);
 
   const stopManagedVideoTrack = useCallback((track) => {
     if (!track) return;
@@ -162,6 +224,52 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
     attachTrackEnded(track);
     return track;
   }, [attachTrackEnded]);
+
+  const prepareMockTrack = useCallback(() => {
+    const { track, cleanup } = createMockCameraTrack();
+    videoTrackCleanupsRef.current.set(track, cleanup);
+    return track;
+  }, []);
+
+  const replaceWithCameraTrack = useCallback(async () => {
+    const currentVideoTrack = streamRef.current?.getVideoTracks()[0];
+    if (currentVideoTrack) {
+      stopManagedVideoTrack(currentVideoTrack);
+    }
+
+    const videoStream = await navigator.mediaDevices.getUserMedia(mediaConstraints("video", selectedVideoDeviceId));
+    const sourceTrack = videoStream.getVideoTracks()[0];
+    const nextTrack = prepareCameraTrack(sourceTrack);
+    replaceVideoTrack(nextTrack);
+    return nextTrack;
+  }, [prepareCameraTrack, replaceVideoTrack, selectedVideoDeviceId, stopManagedVideoTrack]);
+
+  const replaceWithMockTrack = useCallback(() => {
+    try {
+      const nextTrack = prepareMockTrack();
+      replaceVideoTrack(nextTrack);
+      return nextTrack;
+    } catch {
+      setMessages((items) => [...items, "Не удалось подготовить заглушку камеры."]);
+      return null;
+    }
+  }, [prepareMockTrack, replaceVideoTrack]);
+
+  const restoreVideoOutput = useCallback(async () => {
+    const current = streamRef.current ?? new MediaStream();
+    const currentVideoTrack = current.getVideoTracks()[0];
+
+    if (currentVideoTrack) {
+      stopManagedVideoTrack(currentVideoTrack);
+    }
+
+    if (cameraEnabledRef.current) {
+      await replaceWithCameraTrack();
+      return;
+    }
+
+    replaceWithMockTrack();
+  }, [replaceWithCameraTrack, replaceWithMockTrack, stopManagedVideoTrack]);
 
   useEffect(() => {
     let cancelled = false;
@@ -189,14 +297,26 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
             : requestedStream.getVideoTracks()[0];
 
           if (track) {
-            tracks.push(kind === "video" ? prepareCameraTrack(track) : track);
             if (kind === "audio") {
+              tracks.push(track);
               attachTrackEnded(track);
+              syncMediaState({ audioEnabled: true });
+            } else {
+              const nextTrack = prepareCameraTrack(track);
+              tracks.push(nextTrack);
+              cameraEnabledRef.current = true;
+              syncMediaState({ videoEnabled: true });
             }
           }
         } catch (error) {
           const label = kind === "audio" ? "микрофону" : "камере";
           nextMessages.push(`Нет доступа к ${label} или устройство недоступно.`);
+          if (kind === "audio") {
+            syncMediaState({ audioEnabled: false });
+          } else {
+            cameraEnabledRef.current = false;
+            syncMediaState({ videoEnabled: false });
+          }
         }
       }
 
@@ -233,7 +353,7 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
       videoTrackCleanupsRef.current.forEach((cleanup) => cleanup());
       videoTrackCleanupsRef.current.clear();
     };
-  }, [attachTrackEnded, initialAudioEnabled, initialVideoEnabled, prepareCameraTrack, refreshDevices, setManagedStream, stopManagedVideoTrack]);
+  }, [attachTrackEnded, initialAudioEnabled, initialVideoEnabled, prepareCameraTrack, refreshDevices, setManagedStream, stopManagedVideoTrack, syncMediaState]);
 
   const toggleAudio = useCallback(async () => {
     const current = streamRef.current ?? new MediaStream();
@@ -242,6 +362,7 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
     if (audioTrack) {
       audioTrack.enabled = !audioTrack.enabled;
       setManagedStream(cloneStreamWithTracks(current.getTracks()));
+      syncMediaState({ audioEnabled: audioTrack.enabled });
       return;
     }
 
@@ -250,31 +371,42 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
       const nextTrack = audioStream.getAudioTracks()[0];
       attachTrackEnded(nextTrack);
       setManagedStream(cloneStreamWithTracks([...current.getTracks(), nextTrack]));
+      syncMediaState({ audioEnabled: true });
     } catch {
       setMessages((items) => [...items, "Не удалось включить микрофон."]);
     }
-  }, [attachTrackEnded, selectedAudioDeviceId, setManagedStream]);
+  }, [attachTrackEnded, selectedAudioDeviceId, setManagedStream, syncMediaState]);
 
   const toggleVideo = useCallback(async () => {
     const current = streamRef.current ?? new MediaStream();
-    const videoTrack = current.getVideoTracks()[0];
 
-    if (videoTrack) {
-      stopManagedVideoTrack(videoTrack);
-      replaceVideoTrack(null);
-      screenTrackRef.current = null;
-      setScreenSharing(false);
+    if (mediaState.videoEnabled) {
+      cameraEnabledRef.current = false;
+      syncMediaState({ videoEnabled: false });
+
+      if (!screenTrackRef.current) {
+        const videoTrack = current.getVideoTracks()[0];
+        if (videoTrack) {
+          stopManagedVideoTrack(videoTrack);
+        }
+        replaceWithMockTrack();
+      }
       return;
     }
 
     try {
-      const videoStream = await navigator.mediaDevices.getUserMedia(mediaConstraints("video", selectedVideoDeviceId));
-      const nextTrack = videoStream.getVideoTracks()[0];
-      replaceVideoTrack(prepareCameraTrack(nextTrack));
+      cameraEnabledRef.current = true;
+      syncMediaState({ videoEnabled: true });
+
+      if (!screenTrackRef.current) {
+        await replaceWithCameraTrack();
+      }
     } catch {
+      cameraEnabledRef.current = false;
+      syncMediaState({ videoEnabled: false });
       setMessages((items) => [...items, "Не удалось включить камеру."]);
     }
-  }, [prepareCameraTrack, replaceVideoTrack, selectedVideoDeviceId, stopManagedVideoTrack]);
+  }, [mediaState.videoEnabled, replaceWithCameraTrack, replaceWithMockTrack, stopManagedVideoTrack, syncMediaState]);
 
   const selectAudioDevice = useCallback(async (deviceId) => {
     setSelectedAudioDeviceId(deviceId);
@@ -299,26 +431,30 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
 
     const current = streamRef.current ?? new MediaStream();
     const currentVideoTrack = current.getVideoTracks()[0];
-    if (!currentVideoTrack) return;
+    if (!currentVideoTrack || screenTrackRef.current) return;
 
     try {
+      cameraEnabledRef.current = true;
+      syncMediaState({ videoEnabled: true });
       const videoStream = await navigator.mediaDevices.getUserMedia(mediaConstraints("video", deviceId));
       const nextTrack = videoStream.getVideoTracks()[0];
       stopManagedVideoTrack(currentVideoTrack);
-      screenTrackRef.current = null;
-      setScreenSharing(false);
       replaceVideoTrack(prepareCameraTrack(nextTrack));
     } catch {
+      cameraEnabledRef.current = false;
+      syncMediaState({ videoEnabled: false });
       setMessages((items) => [...items, "Не удалось переключить камеру."]);
     }
-  }, [prepareCameraTrack, replaceVideoTrack, stopManagedVideoTrack]);
+  }, [prepareCameraTrack, replaceVideoTrack, stopManagedVideoTrack, syncMediaState]);
 
   const toggleScreenShare = useCallback(async () => {
     if (screenTrackRef.current) {
-      screenTrackRef.current.stop();
+      const screenTrack = screenTrackRef.current;
       screenTrackRef.current = null;
-      replaceVideoTrack(null);
+      screenTrack.onended = null;
+      screenTrack.stop();
       setScreenSharing(false);
+      await restoreVideoOutput();
       return;
     }
 
@@ -337,13 +473,20 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
       }
 
       screenTrackRef.current = screenTrack;
-      attachTrackEnded(screenTrack, { screen: true });
-      replaceVideoTrack(screenTrack);
       setScreenSharing(true);
+      replaceVideoTrack(screenTrack);
+      screenTrack.onended = () => {
+        if (screenTrackRef.current !== screenTrack) {
+          return;
+        }
+        screenTrackRef.current = null;
+        setScreenSharing(false);
+        restoreVideoOutput().catch(() => {});
+      };
     } catch {
       setMessages((items) => [...items, "Не удалось начать трансляцию экрана."]);
     }
-  }, [attachTrackEnded, replaceVideoTrack, stopManagedVideoTrack]);
+  }, [replaceVideoTrack, restoreVideoOutput, stopManagedVideoTrack]);
 
   const stopAll = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => {
@@ -358,10 +501,10 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
     videoTrackCleanupsRef.current.clear();
     screenTrackRef.current = null;
     setScreenSharing(false);
+    cameraEnabledRef.current = false;
+    syncMediaState({ audioEnabled: false, videoEnabled: false });
     setManagedStream(new MediaStream());
-  }, [setManagedStream, stopManagedVideoTrack]);
-
-  const mediaState = useMemo(() => mediaStateFromStream(stream), [stream]);
+  }, [setManagedStream, stopManagedVideoTrack, syncMediaState]);
 
   return {
     stream,

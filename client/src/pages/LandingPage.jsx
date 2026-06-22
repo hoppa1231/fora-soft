@@ -1,30 +1,23 @@
 import { Video } from "lucide-react";
 import { useState } from "react";
-import { createGuestName, createRoomId, isValidRoomId, validateDisplayName } from "../utils/validation.js";
+import { createRoomId, validateRoomName } from "../utils/validation.js";
 
-export function LandingPage({ inviteRoomId, onEnterRoom }) {
-  const [displayName, setDisplayName] = useState("");
+export function LandingPage({ onCreateRoom }) {
+  const [roomName, setRoomName] = useState("");
   const [error, setError] = useState("");
-  const isInvite = Boolean(inviteRoomId);
 
   const submit = (event) => {
     event.preventDefault();
-    const name = displayName.trim();
-    const result = name ? validateDisplayName(name) : { ok: true, value: createGuestName() };
+    const result = validateRoomName(roomName);
 
     if (!result.ok) {
       setError(result.message);
       return;
     }
 
-    if (isInvite && !isValidRoomId(inviteRoomId)) {
-      setError("Некорректная ссылка на комнату");
-      return;
-    }
-
-    onEnterRoom({
-      displayName: result.value,
-      roomId: isInvite ? inviteRoomId : createRoomId()
+    onCreateRoom({
+      roomId: createRoomId(),
+      roomName: result.value
     });
   };
 
@@ -35,28 +28,23 @@ export function LandingPage({ inviteRoomId, onEnterRoom }) {
           <Video aria-hidden="true" size={28} />
         </div>
         <h1 id="entry-title">Простецкий видеочат</h1>
-        <p>
-          {isInvite
-            ? "Можно сразу присоединиться или указать имя перед входом."
-            : "Можно сразу создать комнату или указать имя перед звонком."}
-        </p>
+        <p>Создайте комнату, затем укажите имя пользователя на экране входа.</p>
 
         <form className="entry__form" onSubmit={submit}>
-          <label htmlFor="display-name">Имя</label>
           <input
-            id="display-name"
+            aria-label="Имя комнаты"
             autoFocus
             maxLength={30}
-            value={displayName}
+            value={roomName}
             onChange={(event) => {
-              setDisplayName(event.target.value);
+              setRoomName(event.target.value);
               setError("");
             }}
-            placeholder="Максим (опционально)"
+            placeholder="Имя комнаты"
           />
           {error ? <div className="form-error">{error}</div> : null}
           <button className="primary-button" type="submit">
-            {isInvite ? "Войти" : "Создать комнату"}
+            Создать комнату
           </button>
         </form>
       </section>

@@ -22,7 +22,7 @@ export function RoomPage({ roomId, displayName, initialMediaPreferences, onLeave
   });
   const { consumeSoundEffect, sendMediaState, soundEffects } = socketRoom;
   const [uiToasts, setUiToasts] = useState([]);
-  const [chatOpen, setChatOpen] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
   const joined = socketRoom.status === "joined";

@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isValidRoomId, validateDisplayName, validateMessage } from "./validation.js";
+import { isValidRoomId, validateDisplayName, validateMessage, validateRoomName } from "./validation.js";
 
 test("validates display names", () => {
   assert.equal(validateDisplayName(" Алекс ").ok, true);
   assert.equal(validateDisplayName("").ok, false);
   assert.equal(validateDisplayName("<script>").ok, false);
   assert.equal(validateDisplayName("a".repeat(31)).ok, false);
+});
+
+test("validates room names", () => {
+  assert.equal(validateRoomName(" Комната ").ok, true);
+  assert.equal(validateRoomName("").ok, false);
+  assert.equal(validateRoomName("<script>").ok, false);
+  assert.equal(validateRoomName("a".repeat(31)).ok, false);
 });
 
 test("validates messages", () => {

@@ -26,16 +26,23 @@ export function App() {
 
   const route = useMemo(() => ({ roomId: pathRoomId }), [pathRoomId]);
 
-  const prepareRoom = ({ roomId, displayName }) => {
+  const prepareRoom = ({ roomId, roomName }) => {
     window.history.pushState({}, "", `/room/${roomId}`);
     setPathRoomId(roomId);
-    setPendingSession({ roomId, displayName });
+    setPendingSession({ roomId, roomName });
     setActiveSession(null);
   };
 
-  const joinPreparedRoom = ({ mediaPreferences }) => {
-    if (!pendingSession) return;
-    setActiveSession({ ...pendingSession, mediaPreferences });
+  const joinPreparedRoom = ({ displayName, mediaPreferences }) => {
+    const roomId = pendingSession?.roomId ?? pathRoomId;
+    if (!roomId) return;
+
+    setActiveSession({
+      roomId,
+      roomName: pendingSession?.roomName,
+      displayName,
+      mediaPreferences
+    });
   };
 
   const leaveRoom = () => {
@@ -56,16 +63,16 @@ export function App() {
     );
   }
 
-  if (route.roomId && pendingSession?.roomId === route.roomId) {
+  if (route.roomId && (pendingSession?.roomId === route.roomId || !pendingSession)) {
     return (
       <PreJoinPage
-        displayName={pendingSession.displayName}
-        roomId={pendingSession.roomId}
+        roomId={route.roomId}
+        roomName={pendingSession?.roomName}
         onBack={leaveRoom}
         onJoin={joinPreparedRoom}
       />
     );
   }
 
-  return <LandingPage inviteRoomId={route.roomId} onEnterRoom={prepareRoom} />;
+  return <LandingPage onCreateRoom={prepareRoom} />;
 }

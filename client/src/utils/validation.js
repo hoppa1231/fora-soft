@@ -22,6 +22,24 @@ export function validateDisplayName(value) {
   return { ok: true, value: displayName };
 }
 
+export function validateRoomName(value) {
+  const roomName = String(value ?? "").trim().replace(/\s+/g, " ");
+
+  if (!roomName) {
+    return { ok: false, message: "Введите имя комнаты" };
+  }
+
+  if (roomName.length > DISPLAY_NAME_MAX_LENGTH) {
+    return { ok: false, message: `Имя комнаты должно быть не длиннее ${DISPLAY_NAME_MAX_LENGTH} символов` };
+  }
+
+  if (!DISPLAY_NAME_PATTERN.test(roomName)) {
+    return { ok: false, message: "Используйте буквы, цифры, пробел, дефис или подчёркивание" };
+  }
+
+  return { ok: true, value: roomName };
+}
+
 export function validateMessage(value) {
   const text = String(value ?? "").trim();
 

@@ -1,20 +1,20 @@
 import { expect, test } from "@playwright/test";
 
-async function createRoom(page, name = "Алекс") {
+async function createRoom(page, roomName = "Комната") {
   await page.goto("/");
-  await page.getByLabel("Имя").fill(name);
+  await page.getByLabel("Имя комнаты").fill(roomName);
   await page.getByRole("button", { name: "Создать комнату" }).click();
   await expect(page).toHaveURL(/\/room\/[a-zA-Z0-9_-]+/);
   await expect(page.getByRole("heading", { name: "Готовы войти?" })).toBeVisible();
+  await page.getByLabel("Имя пользователя").fill("Алекс");
   await page.getByRole("button", { name: /Войти в комнату/ }).click();
-  await expect(page.getByText(`${name} (вы)`)).toBeVisible();
+  await expect(page.getByText("Алекс (вы)")).toBeVisible();
   return page.url();
 }
 
 async function joinRoom(page, url, name) {
   await page.goto(url);
-  await page.getByLabel("Имя").fill(name);
-  await page.getByRole("button", { name: "Войти" }).click();
+  await page.getByLabel("Имя пользователя").fill(name);
   await expect(page.getByRole("heading", { name: "Готовы войти?" })).toBeVisible();
   await page.getByRole("button", { name: /Войти в комнату/ }).click();
   await expect(page.getByText(`${name} (вы)`)).toBeVisible();
@@ -29,6 +29,7 @@ test("creates room, joins second participant and exchanges chat message", async 
 
   await expect(first.locator(".room-main__stage video")).toHaveCount(2);
   await expect(second.locator(".room-main__stage video")).toHaveCount(2);
+  await expect(first.getByLabel("Чат и участники")).toHaveClass(/chat-panel--closed/);
 
   await first.getByTitle("Выключить микрофон").click();
   await expect(first.getByTitle("Включить микрофон")).toBeVisible();
@@ -54,9 +55,11 @@ test("creates room, joins second participant and exchanges chat message", async 
   await expect(second.getByText("Алекс покинул комнату")).toHaveCount(0);
   await expect(second.getByText("Алекс присоединился к комнате")).toHaveCount(1);
 
+  await first.getByTitle("Показать чат").click();
   await first.getByLabel("Сообщение").fill("Привет");
   await first.getByTitle("Отправить").click();
 
+  await second.getByTitle("Показать чат").click();
   const chat = second.getByLabel("Чат", { exact: true });
   await expect(chat.getByText("Привет")).toBeVisible();
   await expect(chat.getByText("Алекс", { exact: true })).toBeVisible();
@@ -80,8 +83,7 @@ test("rejects fifth participant", async ({ browser }) => {
   const fifth = await browser.newPage();
   pages.push(fifth);
   await fifth.goto(roomUrl);
-  await fifth.getByLabel("Имя").fill("User 5");
-  await fifth.getByRole("button", { name: "Войти" }).click();
+  await fifth.getByLabel("Имя пользователя").fill("User 5");
   await fifth.getByRole("button", { name: /Войти в комнату/ }).click();
   await expect(fifth.getByText("Комната заполнена")).toBeVisible();
 
@@ -93,11 +95,11 @@ test("toggles chat panel from controls", async ({ browser }) => {
   await createRoom(page, "Алекс");
 
   const chatPanel = page.getByLabel("Чат и участники");
-  await expect(chatPanel).toBeVisible();
-  await page.getByTitle("Скрыть чат").click();
   await expect(chatPanel).toBeHidden();
   await page.getByTitle("Показать чат").click();
   await expect(chatPanel).toBeVisible();
+  await page.getByTitle("Скрыть чат").click();
+  await expect(chatPanel).toBeHidden();
 
   await page.close();
 });

@@ -1,10 +1,14 @@
 import { LogIn, Mic, MicOff, Video, VideoOff } from "lucide-react";
+import { useState } from "react";
 import { ParticipantTile } from "../components/ParticipantTile.jsx";
 import { ToastStack } from "../components/ToastStack.jsx";
 import { useLocalMedia } from "../hooks/useLocalMedia.js";
+import { createGuestName, validateDisplayName } from "../utils/validation.js";
 
-export function PreJoinPage({ displayName, roomId, onBack, onJoin }) {
+export function PreJoinPage({ roomId, roomName, onBack, onJoin }) {
   const localMedia = useLocalMedia();
+  const [displayName, setDisplayName] = useState(() => createGuestName());
+  const [error, setError] = useState("");
   const canJoin = localMedia.status === "ready";
   const previewParticipant = {
     id: "preview",
@@ -15,7 +19,14 @@ export function PreJoinPage({ displayName, roomId, onBack, onJoin }) {
   };
 
   const join = () => {
+    const result = validateDisplayName(displayName);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+
     onJoin({
+      displayName: result.value,
       mediaPreferences: localMedia.mediaState
     });
   };
@@ -41,11 +52,26 @@ export function PreJoinPage({ displayName, roomId, onBack, onJoin }) {
       <section className="prejoin__content" aria-labelledby="prejoin-title">
         <div className="prejoin__header">
           <h1 id="prejoin-title">Готовы войти?</h1>
-          <p>Комната: <span>{roomId}</span></p>
+          <p>Комната: <span>{roomName || roomId}</span></p>
         </div>
 
         <div className="prejoin__preview">
           <ParticipantTile participant={previewParticipant} stream={localMedia.stream} />
+        </div>
+
+        <div className="prejoin__name">
+          <input
+            aria-label="Имя пользователя"
+            autoFocus
+            maxLength={30}
+            value={displayName}
+            onChange={(event) => {
+              setDisplayName(event.target.value);
+              setError("");
+            }}
+            placeholder="Максим (опционально)"
+          />
+          {error ? <div className="form-error">{error}</div> : null}
         </div>
 
         <div className="prejoin__controls" aria-label="Настройки перед входом">
