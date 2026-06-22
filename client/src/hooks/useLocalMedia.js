@@ -77,82 +77,6 @@ function createMirroredCameraTrack(sourceTrack) {
   };
 }
 
-function createMockCameraTrack() {
-  const canvas = document.createElement("canvas");
-  const context = canvas.getContext("2d");
-
-  if (!context || !canvas.captureStream) {
-    throw new Error("Canvas capture unavailable");
-  }
-
-  canvas.width = 960;
-  canvas.height = 540;
-
-  const draw = () => {
-    const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
-    gradient.addColorStop(0, "#101713");
-    gradient.addColorStop(1, "#1b2621");
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
-    context.fillStyle = "rgba(255, 255, 255, 0.02)";
-    for (let row = 0; row < canvas.height; row += 28) {
-      context.fillRect(0, row, canvas.width, 1);
-    }
-
-    context.fillStyle = "rgba(255, 255, 255, 0.03)";
-    for (let col = 0; col < canvas.width; col += 44) {
-      context.fillRect(col, 0, 1, canvas.height);
-    }
-
-    context.fillStyle = "#0d1310";
-    context.fillRect(52, 52, canvas.width - 104, canvas.height - 104);
-
-    context.strokeStyle = "rgba(145, 167, 157, 0.5)";
-    context.lineWidth = 8;
-    context.strokeRect(52, 52, canvas.width - 104, canvas.height - 104);
-
-    const centerX = canvas.width / 2;
-    const headY = canvas.height * 0.43;
-
-    context.fillStyle = "#d5e1d8";
-    context.beginPath();
-    context.arc(centerX, headY, 52, 0, Math.PI * 2);
-    context.fill();
-
-    context.fillStyle = "#d5e1d8";
-    context.beginPath();
-    context.moveTo(centerX - 118, canvas.height * 0.77);
-    context.quadraticCurveTo(centerX - 88, canvas.height * 0.56, centerX, canvas.height * 0.56);
-    context.quadraticCurveTo(centerX + 88, canvas.height * 0.56, centerX + 118, canvas.height * 0.77);
-    context.lineTo(centerX + 118, canvas.height * 0.84);
-    context.lineTo(centerX - 118, canvas.height * 0.84);
-    context.closePath();
-    context.fill();
-
-    context.fillStyle = "#0d1310";
-    context.beginPath();
-    context.arc(centerX, headY, 22, 0, Math.PI * 2);
-    context.fill();
-
-    context.strokeStyle = "rgba(255, 255, 255, 0.08)";
-    context.lineWidth = 12;
-    context.beginPath();
-    context.arc(centerX, headY, 72, 0.12 * Math.PI, 1.88 * Math.PI);
-    context.stroke();
-  };
-
-  draw();
-  const outputStream = canvas.captureStream(1);
-  const outputTrack = outputStream.getVideoTracks()[0];
-  outputTrack.contentHint = "detail";
-
-  return {
-    track: outputTrack,
-    cleanup: () => outputTrack.stop()
-  };
-}
-
 export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled = true } = {}) {
   const [stream, setStream] = useState(null);
   const [status, setStatus] = useState("requesting");
@@ -245,12 +169,6 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
     return track;
   }, [attachTrackEnded]);
 
-  const prepareMockTrack = useCallback(() => {
-    const { track, cleanup } = createMockCameraTrack();
-    videoTrackCleanupsRef.current.set(track, cleanup);
-    return track;
-  }, []);
-
   const replaceWithCameraTrack = useCallback(async () => {
     const currentVideoTrack = streamRef.current?.getVideoTracks()[0];
     if (currentVideoTrack) {
@@ -263,17 +181,6 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
     replaceVideoTrack(nextTrack);
     return nextTrack;
   }, [prepareCameraTrack, replaceVideoTrack, selectedVideoDeviceId, stopManagedVideoTrack]);
-
-  const replaceWithMockTrack = useCallback(() => {
-    try {
-      const nextTrack = prepareMockTrack();
-      replaceVideoTrack(nextTrack);
-      return nextTrack;
-    } catch {
-      setMessages((items) => [...items, "Не удалось подготовить заглушку камеры."]);
-      return null;
-    }
-  }, [prepareMockTrack, replaceVideoTrack]);
 
   const restoreVideoOutput = useCallback(async () => {
     const current = streamRef.current ?? new MediaStream();
@@ -288,8 +195,8 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
       return;
     }
 
-    replaceWithMockTrack();
-  }, [replaceWithCameraTrack, replaceWithMockTrack, stopManagedVideoTrack]);
+    replaceVideoTrack(null);
+  }, [replaceVideoTrack, replaceWithCameraTrack, stopManagedVideoTrack]);
 
   useEffect(() => {
     let cancelled = false;
@@ -409,7 +316,7 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
         if (videoTrack) {
           stopManagedVideoTrack(videoTrack);
         }
-        replaceWithMockTrack();
+        replaceVideoTrack(null);
       }
       return;
     }
@@ -426,7 +333,7 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
       syncMediaState({ videoEnabled: false });
       setMessages((items) => [...items, "Не удалось включить камеру."]);
     }
-  }, [mediaState.videoEnabled, replaceWithCameraTrack, replaceWithMockTrack, stopManagedVideoTrack, syncMediaState]);
+  }, [mediaState.videoEnabled, replaceVideoTrack, replaceWithCameraTrack, stopManagedVideoTrack, syncMediaState]);
 
   const selectAudioDevice = useCallback(async (deviceId) => {
     setSelectedAudioDeviceId(deviceId);

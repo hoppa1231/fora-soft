@@ -26,6 +26,10 @@ export function RoomPage({ roomId, displayName, initialMediaPreferences, onLeave
   const [leaving, setLeaving] = useState(false);
 
   const joined = socketRoom.status === "joined";
+  const publishedMediaState = useMemo(() => ({
+    audioEnabled: localMedia.mediaState.audioEnabled,
+    videoEnabled: localMedia.mediaState.videoEnabled || localMedia.screenSharing
+  }), [localMedia.mediaState.audioEnabled, localMedia.mediaState.videoEnabled, localMedia.screenSharing]);
   const peers = usePeerConnections({
     participantId: socketRoom.participantId,
     existingParticipants: socketRoom.existingParticipants,
@@ -38,9 +42,9 @@ export function RoomPage({ roomId, displayName, initialMediaPreferences, onLeave
 
   useEffect(() => {
     if (joined) {
-      sendMediaState(localMedia.mediaState);
+      sendMediaState(publishedMediaState);
     }
-  }, [joined, localMedia.mediaState, sendMediaState]);
+  }, [joined, publishedMediaState, sendMediaState]);
 
   useEffect(() => {
     for (const effect of soundEffects) {
@@ -52,10 +56,10 @@ export function RoomPage({ roomId, displayName, initialMediaPreferences, onLeave
   const currentParticipant = useMemo(() => ({
     id: socketRoom.participantId ?? "local",
     displayName,
-    audioEnabled: localMedia.mediaState.audioEnabled,
-    videoEnabled: localMedia.mediaState.videoEnabled,
+    audioEnabled: publishedMediaState.audioEnabled,
+    videoEnabled: publishedMediaState.videoEnabled,
     isLocal: true
-  }), [displayName, localMedia.mediaState.audioEnabled, localMedia.mediaState.videoEnabled, socketRoom.participantId]);
+  }), [displayName, publishedMediaState.audioEnabled, publishedMediaState.videoEnabled, socketRoom.participantId]);
 
   const participants = useMemo(() => {
     const remoteParticipants = socketRoom.participants.filter((participant) => participant.id !== socketRoom.participantId);

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 export function ParticipantTile({ participant, stream }) {
   const videoRef = useRef(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const hasVideo = Boolean(stream?.getVideoTracks().some((track) => track.readyState === "live"));
+  const hasVideo = participant.videoEnabled && Boolean(stream?.getVideoTracks().some((track) => track.readyState === "live"));
   const hasBadges = !participant.audioEnabled || !participant.videoEnabled;
 
   useEffect(() => {

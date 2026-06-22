@@ -156,7 +156,7 @@ button {
   width: min(760px, 100%);
   max-height: calc(100vh - 48px);
   display: grid;
-  grid-template-rows: auto auto minmax(320px, 1fr) auto;
+  grid-template-rows: auto minmax(320px, 1fr) auto auto;
   gap: 14px;
 }
 
@@ -190,6 +190,30 @@ button {
 .prejoin__preview .participant-tile {
   height: 100%;
   min-height: 320px;
+}
+
+.prejoin__name {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(58, 71, 65, 0.76);
+  background: var(--surface);
+}
+
+.prejoin__name input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid rgba(58, 71, 65, 0.76);
+  border-radius: 8px;
+  padding: 0 14px;
+  color: var(--text);
+  background: #121615;
+}
+
+.prejoin__name input:focus {
+  border-color: var(--accent);
+  outline: 3px solid rgba(52, 197, 179, 0.18);
 }
 
 .device-selectors {
