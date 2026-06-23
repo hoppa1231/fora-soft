@@ -162,6 +162,7 @@ export function ParticipantTile({ participant, stream, volume = 100, onVolumeCha
               min="0"
               onChange={(event) => onVolumeChange?.(Number(event.target.value))}
               step="10"
+              style={{ "--volume-percent": `${Math.min(Math.max(volume, 0), 200) / 2}%` }}
               type="range"
               value={volume}
             />
