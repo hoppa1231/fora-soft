@@ -1016,6 +1016,7 @@ button {
 .message__text {
   overflow-wrap: anywhere;
   line-height: 1.4;
+  white-space: pre-wrap;
 }
 
 .chat-form {

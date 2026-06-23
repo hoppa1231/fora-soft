@@ -174,7 +174,9 @@ test("supports multiline chat with shift enter", async ({ browser }) => {
 
   await second.getByTitle("Показать чат").click();
   const chat = second.getByLabel("Чат", { exact: true });
-  await expect(chat.getByText("Первая\nВторая")).toBeVisible();
+  const multilineMessage = chat.getByText("Первая\nВторая");
+  await expect(multilineMessage).toBeVisible();
+  await expect(multilineMessage).toHaveCSS("white-space", "pre-wrap");
 
   await first.close();
   await second.close();
