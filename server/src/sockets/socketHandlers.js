@@ -7,7 +7,7 @@ function emitParticipants(io, room) {
   });
 }
 
-const ALLOWED_SOUND_EFFECTS = new Set(["airhorn", "bruh", "tada", "boing"]);
+const ALLOWED_SOUND_EFFECTS = new Set(["airhorn", "rimshot", "clap", "cricket", "trombone"]);
 
 export function registerSocketHandlers(io, store) {
   io.on("connection", (socket) => {

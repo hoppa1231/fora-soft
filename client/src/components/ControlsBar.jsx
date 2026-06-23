@@ -1,11 +1,12 @@
 import { AudioLines, Link2, LogOut, MessageSquare, MessageSquareOff, Mic, MicOff, MonitorUp, ScreenShareOff, Video, VideoOff } from "lucide-react";
 import { useState } from "react";
-import { SOUND_EFFECTS } from "../utils/soundEffects.js";
+import { playSoundEffect, SOUND_EFFECTS } from "../utils/soundEffects.js";
 
 export function ControlsBar({
   audioEnabled,
   chatOpen,
   screenSharing,
+  screenShareSupported,
   videoEnabled,
   onToggleAudio,
   onToggleVideo,
@@ -25,9 +26,11 @@ export function ControlsBar({
       <button className="icon-button" type="button" onClick={onToggleVideo} title={videoEnabled ? "Выключить камеру" : "Включить камеру"}>
         {videoEnabled ? <Video aria-hidden="true" strokeWidth={1.35} /> : <VideoOff aria-hidden="true" strokeWidth={1.35} />}
       </button>
-      <button className={`icon-button ${screenSharing ? "icon-button--active" : ""}`} type="button" onClick={onToggleScreenShare} title={screenSharing ? "Остановить трансляцию экрана" : "Транслировать экран"}>
-        {screenSharing ? <ScreenShareOff aria-hidden="true" strokeWidth={1.35} /> : <MonitorUp aria-hidden="true" strokeWidth={1.35} />}
-      </button>
+      {screenShareSupported ? (
+        <button className={`icon-button ${screenSharing ? "icon-button--active" : ""}`} type="button" onClick={onToggleScreenShare} title={screenSharing ? "Остановить трансляцию экрана" : "Транслировать экран"}>
+          {screenSharing ? <ScreenShareOff aria-hidden="true" strokeWidth={1.35} /> : <MonitorUp aria-hidden="true" strokeWidth={1.35} />}
+        </button>
+      ) : null}
       <button className="icon-button" type="button" onClick={onCopyInvite} title="Скопировать ссылку">
         <Link2 aria-hidden="true" strokeWidth={1.35} />
       </button>
@@ -43,6 +46,7 @@ export function ControlsBar({
                 key={effect.id}
                 type="button"
                 onClick={() => {
+                  playSoundEffect(effect.id);
                   onPlaySound(effect.id);
                   setSoundboardOpen(false);
                 }}

@@ -194,3 +194,21 @@ test("keeps all participants inside mobile viewport", async ({ browser }) => {
 
   await Promise.all([page, ...guests].map((item) => item.close()));
 });
+
+test("opens soundboard menu on mobile", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await createRoom(page, "Саундпад");
+
+  await page.getByTitle("Саундпад").click();
+
+  const menu = page.getByLabel("Саундпад", { exact: true });
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole("button", { name: "Гудок" })).toBeVisible();
+  await expect(menu.getByRole("button", { name: "Тромбон" })).toBeVisible();
+
+  const box = await menu.boundingBox();
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(844);
+
+  await page.close();
+});

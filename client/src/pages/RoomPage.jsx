@@ -147,6 +147,7 @@ export function RoomPage({ roomId, displayName, initialMediaPreferences, onLeave
         <ControlsBar
           audioEnabled={localMedia.mediaState.audioEnabled}
           chatOpen={chatOpen}
+          screenShareSupported={localMedia.screenShareSupported}
           screenSharing={localMedia.screenSharing}
           videoEnabled={localMedia.mediaState.videoEnabled}
           onCopyInvite={copyInvite}

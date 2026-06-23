@@ -86,6 +86,7 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
   const [status, setStatus] = useState("requesting");
   const [messages, setMessages] = useState([]);
   const [screenSharing, setScreenSharing] = useState(false);
+  const [screenShareSupported] = useState(() => Boolean(navigator.mediaDevices?.getDisplayMedia));
   const [mediaState, setMediaState] = useState({
     audioEnabled: initialAudioEnabled,
     videoEnabled: initialVideoEnabled
@@ -443,6 +444,7 @@ export function useLocalMedia({ initialAudioEnabled = true, initialVideoEnabled 
     messages,
     mediaState,
     screenSharing,
+    screenShareSupported,
     audioInputs,
     videoInputs,
     selectedAudioDeviceId,
