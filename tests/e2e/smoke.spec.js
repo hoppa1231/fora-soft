@@ -199,6 +199,49 @@ test("keeps all participants inside mobile viewport", async ({ browser }) => {
   await Promise.all([page, ...guests].map((item) => item.close()));
 });
 
+test("keeps prejoin layout inside mobile viewport", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await page.goto("/");
+  await page.getByLabel("Имя комнаты").fill("Телефон");
+  await page.getByRole("button", { name: "Создать комнату" }).click();
+  await expect(page.getByRole("heading", { name: "Готовы войти?" })).toBeVisible();
+
+  const metrics = await page.evaluate(() => {
+    const toBox = (element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        bottom: rect.bottom,
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        width: rect.width
+      };
+    };
+
+    return {
+      controls: toBox(document.querySelector(".prejoin__controls")),
+      content: toBox(document.querySelector(".prejoin__content")),
+      documentHeight: document.documentElement.scrollHeight,
+      height: window.innerHeight,
+      name: toBox(document.querySelector(".prejoin__name")),
+      preview: toBox(document.querySelector(".prejoin__preview")),
+      tile: toBox(document.querySelector(".prejoin__preview .participant-tile")),
+      width: window.innerWidth
+    };
+  });
+
+  for (const rect of [metrics.content, metrics.preview, metrics.tile, metrics.name, metrics.controls]) {
+    expect(rect.left).toBeGreaterThanOrEqual(0);
+    expect(rect.right).toBeLessThanOrEqual(metrics.width);
+    expect(rect.width).toBeGreaterThan(0);
+  }
+
+  expect(metrics.controls.bottom).toBeLessThanOrEqual(metrics.height);
+  expect(metrics.documentHeight).toBeLessThanOrEqual(metrics.height + 1);
+
+  await page.close();
+});
+
 test("opens soundboard menu on mobile", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await createRoom(page, "Саундпад");

@@ -632,14 +632,8 @@ button {
   .controls {
     min-height: 0;
     flex-wrap: nowrap;
-    justify-content: flex-start;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .controls::-webkit-scrollbar {
-    display: none;
+    justify-content: center;
+    overflow: visible;
   }
 
   .chat-panel {
@@ -670,14 +664,16 @@ button {
   }
 
   .prejoin {
-    padding: 12px;
+    padding: 8px;
     align-items: stretch;
   }
 
   .prejoin__content {
+    min-width: 0;
     width: 100%;
-    max-height: calc(100dvh - 24px);
-    grid-template-rows: auto minmax(220px, 1fr) auto auto;
+    max-height: calc(100dvh - 16px);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    gap: 8px;
   }
 
   .prejoin__header {
@@ -688,8 +684,18 @@ button {
 
   .prejoin__preview,
   .prejoin__preview .participant-tile {
-    min-height: 220px;
-    height: min(42vh, 320px);
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .prejoin__preview .participant-tile {
+    aspect-ratio: auto;
+  }
+
+  .prejoin__name {
+    padding: 8px;
   }
 
   .device-selectors {
@@ -697,7 +703,20 @@ button {
   }
 
   .prejoin__controls {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 40px 40px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .prejoin__controls .secondary-button {
+    grid-column: 1 / -1;
+  }
+
+  .prejoin__join {
+    justify-content: center;
+    min-width: 0;
   }
 
   .room-main {
@@ -726,14 +745,14 @@ button {
   }
 
   .controls {
-    gap: 6px;
-    padding: 6px;
+    gap: 5px;
+    padding: 5px;
   }
 
   .icon-button {
-    width: 40px;
-    height: 40px;
-    flex: 0 0 40px;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
   }
 
   .soundboard__menu {
