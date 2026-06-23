@@ -3,12 +3,13 @@ import { io } from "socket.io-client";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? "/";
 
-export function useSocketRoom({ roomId, displayName, enabled, initialMediaState }) {
+export function useSocketRoom({ roomId, roomName, displayName, enabled, initialMediaState }) {
   const socketRef = useRef(null);
   const initialMediaStateRef = useRef(initialMediaState);
   const [status, setStatus] = useState(enabled ? "connecting" : "idle");
   const [error, setError] = useState("");
   const [participantId, setParticipantId] = useState(null);
+  const [serverRoomName, setServerRoomName] = useState(roomName ?? "");
   const [participants, setParticipants] = useState([]);
   const [existingParticipants, setExistingParticipants] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -37,6 +38,7 @@ export function useSocketRoom({ roomId, displayName, enabled, initialMediaState 
         "join-room",
         {
           roomId,
+          roomName,
           displayName,
           audioEnabled: initialMediaStateRef.current.audioEnabled,
           videoEnabled: initialMediaStateRef.current.videoEnabled
@@ -49,6 +51,7 @@ export function useSocketRoom({ roomId, displayName, enabled, initialMediaState 
           }
 
           setParticipantId(response.participantId);
+          setServerRoomName(response.room.name);
           setParticipants(response.room.participants);
           setExistingParticipants(response.existingParticipants);
           setMessages(response.room.messages);
@@ -93,7 +96,7 @@ export function useSocketRoom({ roomId, displayName, enabled, initialMediaState 
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [displayName, enabled, roomId]);
+  }, [displayName, enabled, roomId, roomName]);
 
   const sendMessage = useCallback((text) => {
     socketRef.current?.emit("chat-message", { roomId, text });
@@ -128,6 +131,7 @@ export function useSocketRoom({ roomId, displayName, enabled, initialMediaState 
     status,
     error,
     participantId,
+    roomName: serverRoomName,
     participants,
     existingParticipants,
     messages,
@@ -144,6 +148,7 @@ export function useSocketRoom({ roomId, displayName, enabled, initialMediaState 
     status,
     error,
     participantId,
+    serverRoomName,
     participants,
     existingParticipants,
     messages,

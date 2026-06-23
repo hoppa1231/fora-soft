@@ -16,6 +16,7 @@ export function RoomPage({ roomId, roomName, displayName, initialMediaPreference
   const socketEnabled = localMedia.status === "ready";
   const socketRoom = useSocketRoom({
     roomId,
+    roomName,
     displayName,
     enabled: socketEnabled,
     initialMediaState: localMedia.mediaState
@@ -129,7 +130,7 @@ export function RoomPage({ roomId, roomName, displayName, initialMediaPreference
   }
 
   const isConnecting = localMedia.status === "requesting" || socketRoom.status === "connecting" || socketRoom.status === "idle";
-  const roomLabel = roomName || roomId;
+  const roomLabel = socketRoom.roomName || roomName || roomId;
 
   return (
     <main className={`room-shell ${chatOpen ? "room-shell--chat-open" : "room-shell--chat-closed"} ${leaving ? "room-shell--leaving" : ""}`}>

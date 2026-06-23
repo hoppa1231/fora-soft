@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { normalizeChatMessage, normalizeDisplayName, normalizeRoomId } from "../src/validation/sanitize.js";
+import { normalizeChatMessage, normalizeDisplayName, normalizeRoomId, normalizeRoomName } from "../src/validation/sanitize.js";
 
 test("normalizes display names", () => {
   assert.deepEqual(normalizeDisplayName(" Алекс ").ok, true);
@@ -13,6 +13,13 @@ test("normalizes room ids", () => {
   assert.equal(normalizeRoomId("abcd_123").ok, true);
   assert.equal(normalizeRoomId("../bad").ok, false);
   assert.equal(normalizeRoomId("abc").ok, false);
+});
+
+test("normalizes optional room names", () => {
+  assert.equal(normalizeRoomName(" Support ").value, "Support");
+  assert.equal(normalizeRoomName("").value, null);
+  assert.equal(normalizeRoomName("<script>").ok, false);
+  assert.equal(normalizeRoomName("a".repeat(31)).ok, false);
 });
 
 test("normalizes chat messages", () => {

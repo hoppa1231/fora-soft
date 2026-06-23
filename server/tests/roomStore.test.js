@@ -8,11 +8,13 @@ test("creates room, limits participants and removes empty room", () => {
   for (let index = 1; index <= 4; index += 1) {
     const result = store.createOrJoinRoom({
       roomId: "room1",
+      roomName: index === 1 ? "Daily" : undefined,
       socketId: `socket-${index}`,
       displayName: `User ${index}`
     });
 
     assert.equal(result.ok, true);
+    assert.equal(result.room.name, "Daily");
   }
 
   const rejected = store.createOrJoinRoom({

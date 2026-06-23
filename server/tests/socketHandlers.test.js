@@ -56,10 +56,12 @@ test("joins room, delivers chat history and rejects fifth participant", async ()
   for (let index = 0; index < 4; index += 1) {
     const response = await emitAck(sockets[index], "join-room", {
       roomId: "test-room",
+      roomName: index === 0 ? "Support" : undefined,
       displayName: `User ${index + 1}`
     });
 
     assert.equal(response.ok, true);
+    assert.equal(response.room.name, "Support");
   }
 
   const messageResponse = await emitAck(sockets[0], "chat-message", {

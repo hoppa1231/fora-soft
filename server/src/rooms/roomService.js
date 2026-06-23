@@ -1,4 +1,4 @@
-import { asBoolean, normalizeChatMessage, normalizeDisplayName, normalizeRoomId } from "../validation/sanitize.js";
+import { asBoolean, normalizeChatMessage, normalizeDisplayName, normalizeRoomId, normalizeRoomName } from "../validation/sanitize.js";
 
 export function joinRoom({ store, payload, socketId }) {
   const roomIdResult = normalizeRoomId(payload?.roomId);
@@ -7,8 +7,12 @@ export function joinRoom({ store, payload, socketId }) {
   const displayNameResult = normalizeDisplayName(payload?.displayName);
   if (!displayNameResult.ok) return displayNameResult;
 
+  const roomNameResult = normalizeRoomName(payload?.roomName);
+  if (!roomNameResult.ok) return roomNameResult;
+
   return store.createOrJoinRoom({
     roomId: roomIdResult.value,
+    roomName: roomNameResult.value,
     socketId,
     displayName: displayNameResult.value,
     audioEnabled: asBoolean(payload?.audioEnabled),

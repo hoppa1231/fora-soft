@@ -30,6 +30,32 @@ export function normalizeDisplayName(value) {
   return { ok: true, value: displayName };
 }
 
+export function normalizeRoomName(value) {
+  const roomName = String(value ?? "").trim().replace(/\s+/g, " ");
+
+  if (!roomName) {
+    return { ok: true, value: null };
+  }
+
+  if (roomName.length > DISPLAY_NAME_MAX_LENGTH) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: `Имя комнаты должно быть не длиннее ${DISPLAY_NAME_MAX_LENGTH} символов`
+    };
+  }
+
+  if (!DISPLAY_NAME_PATTERN.test(roomName)) {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "Имя комнаты может содержать буквы, цифры, пробел, дефис и подчёркивание"
+    };
+  }
+
+  return { ok: true, value: roomName };
+}
+
 export function normalizeRoomId(value) {
   const roomId = String(value ?? "").trim();
 

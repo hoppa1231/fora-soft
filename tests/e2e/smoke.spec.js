@@ -54,6 +54,7 @@ test("creates room, joins second participant and exchanges chat message", async 
 
   const second = await browser.newPage();
   await joinRoom(second, roomUrl, "Мария");
+  await expect(second.locator(".room-main__room-name")).toHaveText("Комната");
 
   await expect(first.locator(".room-main__stage video")).toHaveCount(2);
   await expect(second.locator(".room-main__stage video")).toHaveCount(2);

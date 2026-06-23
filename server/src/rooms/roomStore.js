@@ -26,6 +26,7 @@ function serializeParticipant(participant) {
 function serializeRoom(room) {
   return {
     id: room.id,
+    name: room.name,
     participants: [...room.participants.values()].map(serializeParticipant),
     messages: [...room.messages]
   };
@@ -37,17 +38,20 @@ export class RoomStore {
     this.socketIndex = new Map();
   }
 
-  createOrJoinRoom({ roomId, socketId, displayName, audioEnabled = false, videoEnabled = false }) {
+  createOrJoinRoom({ roomId, roomName, socketId, displayName, audioEnabled = false, videoEnabled = false }) {
     let room = this.rooms.get(roomId);
 
     if (!room) {
       room = {
         id: roomId,
+        name: roomName || roomId,
         createdAt: Date.now(),
         participants: new Map(),
         messages: []
       };
       this.rooms.set(roomId, room);
+    } else if (!room.name && roomName) {
+      room.name = roomName;
     }
 
     if (room.participants.size >= MAX_PARTICIPANTS) {
