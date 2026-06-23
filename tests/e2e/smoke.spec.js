@@ -60,6 +60,7 @@ test("creates room, joins second participant and exchanges chat message", async 
 
   await expect(first.locator(".room-main__stage video")).toHaveCount(2);
   await expect(second.locator(".room-main__stage video")).toHaveCount(2);
+  await remoteAlexTile.locator(".participant-tile__volume").hover();
   await expect(alexVolume).toHaveValue("100");
   await alexVolume.evaluate((input) => {
     input.value = "200";

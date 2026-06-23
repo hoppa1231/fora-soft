@@ -155,16 +155,18 @@ export function ParticipantTile({ participant, stream, volume = 100, onVolumeCha
       {!participant.isLocal ? (
         <label className="participant-tile__volume">
           {volume === 0 ? <VolumeX aria-hidden="true" size={15} strokeWidth={1.5} /> : <Volume2 aria-hidden="true" size={15} strokeWidth={1.5} />}
-          <input
-            aria-label={`Громкость ${participant.displayName}`}
-            max="200"
-            min="0"
-            onChange={(event) => onVolumeChange?.(Number(event.target.value))}
-            step="10"
-            type="range"
-            value={volume}
-          />
-          <span>{volume}</span>
+          <span className="participant-tile__volume-control">
+            <input
+              aria-label={`Громкость ${participant.displayName}`}
+              max="200"
+              min="0"
+              onChange={(event) => onVolumeChange?.(Number(event.target.value))}
+              step="10"
+              type="range"
+              value={volume}
+            />
+            <span>{volume}</span>
+          </span>
         </label>
       ) : null}
     </article>

@@ -446,17 +446,46 @@ button {
   position: absolute;
   top: 12px;
   right: 12px;
-  width: min(190px, calc(100% - 24px));
+  width: 30px;
   min-height: 30px;
-  display: grid;
-  grid-template-columns: auto minmax(70px, 1fr) 30px;
+  display: inline-grid;
+  grid-template-columns: auto 0fr;
   align-items: center;
-  gap: 7px;
+  gap: 0;
   border-radius: 8px;
   padding: 5px 8px;
   color: #ffffff;
   background: rgba(8, 11, 10, 0.72);
   backdrop-filter: blur(4px);
+  cursor: pointer;
+  overflow: hidden;
+  transition: width 150ms ease, gap 150ms ease, background-color 150ms ease;
+}
+
+.participant-tile__volume:hover,
+.participant-tile__volume:focus-within {
+  width: min(190px, calc(100% - 24px));
+  grid-template-columns: auto minmax(100px, 1fr);
+  gap: 7px;
+  background: rgba(8, 11, 10, 0.82);
+}
+
+.participant-tile__volume-control {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(70px, 1fr) 30px;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.participant-tile__volume:hover .participant-tile__volume-control,
+.participant-tile__volume:focus-within .participant-tile__volume-control {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .participant-tile__volume input {
@@ -465,7 +494,27 @@ button {
   accent-color: var(--accent);
 }
 
-.participant-tile__volume span {
+.participant-tile__volume input[type="range"] {
+  height: 14px;
+}
+
+.participant-tile__volume input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(167, 181, 174, 0.52);
+}
+
+.participant-tile__volume input[type="range"]::-webkit-slider-thumb {
+  margin-top: -5px;
+}
+
+.participant-tile__volume input[type="range"]::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(167, 181, 174, 0.52);
+}
+
+.participant-tile__volume-control span {
   color: var(--muted);
   font-size: 12px;
   line-height: 1;
@@ -806,13 +855,23 @@ button {
   .participant-tile__volume {
     top: 8px;
     right: 8px;
-    width: min(156px, calc(100% - 16px));
-    grid-template-columns: auto minmax(52px, 1fr) 25px;
-    gap: 5px;
+    width: 28px;
     padding: 4px 6px;
   }
 
-  .participant-tile__volume span {
+  .participant-tile__volume:hover,
+  .participant-tile__volume:focus-within {
+    width: min(156px, calc(100% - 16px));
+    grid-template-columns: auto minmax(92px, 1fr);
+    gap: 5px;
+  }
+
+  .participant-tile__volume-control {
+    grid-template-columns: minmax(52px, 1fr) 25px;
+    gap: 5px;
+  }
+
+  .participant-tile__volume-control span {
     font-size: 11px;
   }
 
