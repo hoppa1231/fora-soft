@@ -5,7 +5,7 @@ import { ToastStack } from "../components/ToastStack.jsx";
 import { useLocalMedia } from "../hooks/useLocalMedia.js";
 import { createGuestName, validateDisplayName } from "../utils/validation.js";
 
-export function PreJoinPage({ roomId, roomName, onBack, onJoin }) {
+export function PreJoinPage({ roomId, onBack, onJoin }) {
   const localMedia = useLocalMedia();
   const [displayName, setDisplayName] = useState(() => createGuestName());
   const [error, setError] = useState("");
@@ -52,7 +52,7 @@ export function PreJoinPage({ roomId, roomName, onBack, onJoin }) {
       <section className="prejoin__content" aria-labelledby="prejoin-title">
         <div className="prejoin__header">
           <h1 id="prejoin-title">Готовы войти?</h1>
-          <p>Комната: <span>{roomName || roomId}</span></p>
+          <p>ID комнаты: <span>{roomId}</span></p>
         </div>
 
         <div className="prejoin__preview">

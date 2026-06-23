@@ -8,7 +8,7 @@ import { usePeerConnections } from "../hooks/usePeerConnections.js";
 import { useSocketRoom } from "../hooks/useSocketRoom.js";
 import { playSoundEffect } from "../utils/soundEffects.js";
 
-export function RoomPage({ roomId, displayName, initialMediaPreferences, onLeave }) {
+export function RoomPage({ roomId, roomName, displayName, initialMediaPreferences, onLeave }) {
   const localMedia = useLocalMedia({
     initialAudioEnabled: initialMediaPreferences?.audioEnabled ?? true,
     initialVideoEnabled: initialMediaPreferences?.videoEnabled ?? true
@@ -129,6 +129,7 @@ export function RoomPage({ roomId, displayName, initialMediaPreferences, onLeave
   }
 
   const isConnecting = localMedia.status === "requesting" || socketRoom.status === "connecting" || socketRoom.status === "idle";
+  const roomLabel = roomName || roomId;
 
   return (
     <main className={`room-shell ${chatOpen ? "room-shell--chat-open" : "room-shell--chat-closed"} ${leaving ? "room-shell--leaving" : ""}`}>
@@ -144,20 +145,23 @@ export function RoomPage({ roomId, displayName, initialMediaPreferences, onLeave
             remoteStreams={peers.remoteStreams}
           />
         </div>
-        <ControlsBar
-          audioEnabled={localMedia.mediaState.audioEnabled}
-          chatOpen={chatOpen}
-          screenShareSupported={localMedia.screenShareSupported}
-          screenSharing={localMedia.screenSharing}
-          videoEnabled={localMedia.mediaState.videoEnabled}
-          onCopyInvite={copyInvite}
-          onLeave={leave}
-          onPlaySound={socketRoom.sendSoundEffect}
-          onToggleChat={() => setChatOpen((value) => !value)}
-          onToggleAudio={localMedia.toggleAudio}
-          onToggleScreenShare={localMedia.toggleScreenShare}
-          onToggleVideo={localMedia.toggleVideo}
-        />
+        <div className="room-main__footer">
+          <div className="room-main__room-name">{roomLabel}</div>
+          <ControlsBar
+            audioEnabled={localMedia.mediaState.audioEnabled}
+            chatOpen={chatOpen}
+            screenShareSupported={localMedia.screenShareSupported}
+            screenSharing={localMedia.screenSharing}
+            videoEnabled={localMedia.mediaState.videoEnabled}
+            onCopyInvite={copyInvite}
+            onLeave={leave}
+            onPlaySound={socketRoom.sendSoundEffect}
+            onToggleChat={() => setChatOpen((value) => !value)}
+            onToggleAudio={localMedia.toggleAudio}
+            onToggleScreenShare={localMedia.toggleScreenShare}
+            onToggleVideo={localMedia.toggleVideo}
+          />
+        </div>
       </section>
       <ChatPanel
         open={chatOpen}

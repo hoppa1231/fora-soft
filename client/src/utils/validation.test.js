@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isValidRoomId, validateDisplayName, validateMessage, validateRoomName } from "./validation.js";
+import { createRoomId, isValidRoomId, validateDisplayName, validateMessage, validateRoomName } from "./validation.js";
 
 test("validates display names", () => {
   assert.equal(validateDisplayName(" Алекс ").ok, true);
@@ -26,4 +26,10 @@ test("validates room ids", () => {
   assert.equal(isValidRoomId("abcd_1234"), true);
   assert.equal(isValidRoomId("../bad"), false);
   assert.equal(isValidRoomId("abc"), false);
+});
+
+test("creates short valid room ids", () => {
+  const roomId = createRoomId();
+  assert.equal(roomId.length, 8);
+  assert.equal(isValidRoomId(roomId), true);
 });

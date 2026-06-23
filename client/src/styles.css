@@ -304,6 +304,23 @@ button {
   place-items: center;
 }
 
+.room-main__footer {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.room-main__room-name {
+  max-width: min(360px, 72vw);
+  overflow: hidden;
+  padding-left: 6px;
+  color: #7f8b86;
+  font-size: 13px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .loading-banner,
 .notice {
   border-radius: 8px;

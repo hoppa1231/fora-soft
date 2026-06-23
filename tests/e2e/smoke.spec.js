@@ -5,10 +5,13 @@ async function createRoom(page, roomName = "Комната") {
   await page.getByLabel("Имя комнаты").fill(roomName);
   await page.getByRole("button", { name: "Создать комнату" }).click();
   await expect(page).toHaveURL(/\/room\/[a-zA-Z0-9_-]+/);
+  const roomId = new URL(page.url()).pathname.split("/").pop();
   await expect(page.getByRole("heading", { name: "Готовы войти?" })).toBeVisible();
+  await expect(page.getByText(`ID комнаты: ${roomId}`)).toBeVisible();
   await page.getByLabel("Имя пользователя").fill("Алекс");
   await page.getByRole("button", { name: /Войти в комнату/ }).click();
   await expect(page.getByText("Алекс (вы)")).toBeVisible();
+  await expect(page.locator(".room-main__room-name")).toHaveText(roomName);
   return page.url();
 }
 

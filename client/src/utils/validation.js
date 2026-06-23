@@ -59,11 +59,14 @@ export function isValidRoomId(value) {
 }
 
 export function createRoomId() {
-  if (globalThis.crypto?.randomUUID) {
-    return globalThis.crypto.randomUUID().replaceAll("-", "").slice(0, 16);
+  const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+  if (globalThis.crypto?.getRandomValues) {
+    const bytes = globalThis.crypto.getRandomValues(new Uint8Array(8));
+    return [...bytes].map((byte) => alphabet[byte % alphabet.length]).join("");
   }
 
-  return Math.random().toString(36).slice(2, 12);
+  return Math.random().toString(36).slice(2, 10).padEnd(8, "0");
 }
 
 export function createGuestName() {

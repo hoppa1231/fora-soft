@@ -58,6 +58,7 @@ export function App() {
         displayName={activeSession.displayName}
         initialMediaPreferences={activeSession.mediaPreferences}
         roomId={activeSession.roomId}
+        roomName={activeSession.roomName}
         onLeave={leaveRoom}
       />
     );
@@ -67,7 +68,6 @@ export function App() {
     return (
       <PreJoinPage
         roomId={route.roomId}
-        roomName={pendingSession?.roomName}
         onBack={leaveRoom}
         onJoin={joinPreparedRoom}
       />
