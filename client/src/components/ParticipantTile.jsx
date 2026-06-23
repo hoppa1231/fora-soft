@@ -1,11 +1,14 @@
-import { MicOff, UserRound, VideoOff } from "lucide-react";
+import { MicOff, UserRound, VideoOff, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-export function ParticipantTile({ participant, stream }) {
+export function ParticipantTile({ participant, stream, volume = 100, onVolumeChange }) {
+  const audioRef = useRef(null);
   const videoRef = useRef(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const hasVideo = participant.videoEnabled && Boolean(stream?.getVideoTracks().some((track) => track.readyState === "live"));
   const hasBadges = !participant.audioEnabled || !participant.videoEnabled;
+  const audioTrack = stream?.getAudioTracks().find((track) => track.readyState === "live");
+  const canPlayAudio = !participant.isLocal && participant.audioEnabled && Boolean(audioTrack);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -15,8 +18,49 @@ export function ParticipantTile({ participant, stream }) {
   }, [hasVideo, stream]);
 
   useEffect(() => {
-    const audioTrack = stream?.getAudioTracks().find((track) => track.readyState === "live");
+    const audio = audioRef.current;
+    if (!audio) return;
 
+    audio.srcObject = canPlayAudio ? new MediaStream([audioTrack]) : null;
+    audio.volume = Math.min(Math.max(volume, 0), 100) / 100;
+    audio.muted = !canPlayAudio || volume === 0;
+
+    if (canPlayAudio) {
+      audio.play().catch(() => {});
+    }
+  }, [audioTrack, canPlayAudio, volume]);
+
+  useEffect(() => {
+    if (!canPlayAudio || volume <= 100) {
+      return undefined;
+    }
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) {
+      return undefined;
+    }
+
+    const audioContext = new AudioContextClass();
+    const source = audioContext.createMediaStreamSource(new MediaStream([audioTrack]));
+    const gain = audioContext.createGain();
+    gain.gain.value = Math.min(volume - 100, 100) / 100;
+    source.connect(gain).connect(audioContext.destination);
+
+    const resume = () => audioContext.resume().catch(() => {});
+    resume();
+    window.addEventListener("pointerdown", resume, { once: true });
+    window.addEventListener("keydown", resume, { once: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", resume);
+      window.removeEventListener("keydown", resume);
+      source.disconnect();
+      gain.disconnect();
+      audioContext.close();
+    };
+  }, [audioTrack, canPlayAudio, volume]);
+
+  useEffect(() => {
     if (!audioTrack || !participant.audioEnabled) {
       setIsSpeaking(false);
       return undefined;
@@ -76,16 +120,18 @@ export function ParticipantTile({ participant, stream }) {
       audioContext.close();
       setIsSpeaking(false);
     };
-  }, [participant.audioEnabled, stream]);
+  }, [audioTrack, participant.audioEnabled]);
 
   return (
     <article className={`participant-tile ${isSpeaking ? "participant-tile--speaking" : ""}`}>
+      {!participant.isLocal ? <audio ref={audioRef} autoPlay playsInline /> : null}
+
       {hasVideo ? (
         <video
           ref={videoRef}
           autoPlay
           playsInline
-          muted={participant.isLocal}
+          muted
           className="participant-tile__video"
         />
       ) : (
@@ -105,6 +151,22 @@ export function ParticipantTile({ participant, stream }) {
           </span>
         ) : null}
       </div>
+
+      {!participant.isLocal ? (
+        <label className="participant-tile__volume">
+          {volume === 0 ? <VolumeX aria-hidden="true" size={15} strokeWidth={1.5} /> : <Volume2 aria-hidden="true" size={15} strokeWidth={1.5} />}
+          <input
+            aria-label={`Громкость ${participant.displayName}`}
+            max="200"
+            min="0"
+            onChange={(event) => onVolumeChange?.(Number(event.target.value))}
+            step="10"
+            type="range"
+            value={volume}
+          />
+          <span>{volume}</span>
+        </label>
+      ) : null}
     </article>
   );
 }

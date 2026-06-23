@@ -55,9 +55,18 @@ test("creates room, joins second participant and exchanges chat message", async 
   const second = await browser.newPage();
   await joinRoom(second, roomUrl, "Мария");
   await expect(second.locator(".room-main__room-name")).toHaveText("Комната");
+  const remoteAlexTile = second.locator(".participant-tile").filter({ hasText: "Алекс" });
+  const alexVolume = remoteAlexTile.getByLabel("Громкость Алекс");
 
   await expect(first.locator(".room-main__stage video")).toHaveCount(2);
   await expect(second.locator(".room-main__stage video")).toHaveCount(2);
+  await expect(alexVolume).toHaveValue("100");
+  await alexVolume.evaluate((input) => {
+    input.value = "200";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await expect(alexVolume).toHaveValue("200");
   await expect(first.getByLabel("Чат и участники")).toHaveClass(/chat-panel--closed/);
 
   await first.getByTitle("Выключить микрофон").click();
@@ -68,6 +77,9 @@ test("creates room, joins second participant and exchanges chat message", async 
 
   await first.getByTitle("Выключить камеру").click();
   await expect(first.getByTitle("Включить камеру")).toBeVisible();
+  await expect.poll(async () => remoteAlexTile.locator("audio").evaluate((audio) => (
+    audio.srcObject?.getAudioTracks().some((track) => track.readyState === "live") ?? false
+  ))).toBe(true);
   await first.getByTitle("Включить камеру").click();
   await expect(first.getByTitle("Выключить камеру")).toBeVisible();
   await expect(second.locator(".room-main__stage video")).toHaveCount(2);

@@ -442,6 +442,36 @@ button {
   white-space: nowrap;
 }
 
+.participant-tile__volume {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: min(190px, calc(100% - 24px));
+  min-height: 30px;
+  display: grid;
+  grid-template-columns: auto minmax(70px, 1fr) 30px;
+  align-items: center;
+  gap: 7px;
+  border-radius: 8px;
+  padding: 5px 8px;
+  color: #ffffff;
+  background: rgba(8, 11, 10, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.participant-tile__volume input {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--accent);
+}
+
+.participant-tile__volume span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  text-align: right;
+}
+
 .controls {
   min-height: 64px;
   z-index: 5;
@@ -771,6 +801,19 @@ button {
     left: 8px;
     right: 8px;
     bottom: 8px;
+  }
+
+  .participant-tile__volume {
+    top: 8px;
+    right: 8px;
+    width: min(156px, calc(100% - 16px));
+    grid-template-columns: auto minmax(52px, 1fr) 25px;
+    gap: 5px;
+    padding: 4px 6px;
+  }
+
+  .participant-tile__volume span {
+    font-size: 11px;
   }
 
   .toast-stack {
