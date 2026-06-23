@@ -28,8 +28,6 @@ export function LandingPage({ onCreateRoom }) {
           <Video aria-hidden="true" size={28} />
         </div>
         <h1 id="entry-title">Простецкий видеочат</h1>
-        <p>Создайте комнату, затем укажите имя пользователя на экране входа.</p>
-
         <form className="entry__form" onSubmit={submit}>
           <input
             aria-label="Имя комнаты"
