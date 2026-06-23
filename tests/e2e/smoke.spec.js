@@ -148,10 +148,36 @@ test("toggles chat panel from controls", async ({ browser }) => {
   await expect(chatPanel).toBeHidden();
   await page.getByTitle("Показать чат").click();
   await expect(chatPanel).toBeVisible();
+  await page.getByTitle("Закрыть чат").click();
+  await expect(chatPanel).toBeHidden();
+  await page.getByTitle("Показать чат").click();
+  await expect(chatPanel).toBeVisible();
   await page.getByTitle("Скрыть чат").click();
   await expect(chatPanel).toBeHidden();
 
   await page.close();
+});
+
+test("supports multiline chat with shift enter", async ({ browser }) => {
+  const first = await browser.newPage();
+  const roomUrl = await createRoom(first, "Чат");
+
+  const second = await browser.newPage();
+  await joinRoom(second, roomUrl, "Мария");
+
+  await first.getByTitle("Показать чат").click();
+  await first.getByLabel("Сообщение").fill("Первая");
+  await first.getByLabel("Сообщение").press("Shift+Enter");
+  await first.getByLabel("Сообщение").pressSequentially("Вторая");
+  await expect(first.getByLabel("Сообщение")).toHaveValue("Первая\nВторая");
+  await first.getByLabel("Сообщение").press("Enter");
+
+  await second.getByTitle("Показать чат").click();
+  const chat = second.getByLabel("Чат", { exact: true });
+  await expect(chat.getByText("Первая\nВторая")).toBeVisible();
+
+  await first.close();
+  await second.close();
 });
 
 test("keeps all participants inside mobile viewport", async ({ browser }) => {

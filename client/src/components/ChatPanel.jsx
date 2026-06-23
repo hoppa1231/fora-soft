@@ -1,8 +1,8 @@
-import { SendHorizontal } from "lucide-react";
+import { SendHorizontal, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { formatLocalTime, validateMessage } from "../utils/validation.js";
 
-export function ChatPanel({ open, messages, participants, onSendMessage }) {
+export function ChatPanel({ open, messages, participants, onClose, onSendMessage }) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const listRef = useRef(null);
@@ -13,6 +13,10 @@ export function ChatPanel({ open, messages, participants, onSendMessage }) {
 
   const submit = (event) => {
     event.preventDefault();
+    sendDraft();
+  };
+
+  const sendDraft = () => {
     const result = validateMessage(draft);
 
     if (!result.ok) {
@@ -25,8 +29,21 @@ export function ChatPanel({ open, messages, participants, onSendMessage }) {
     setError("");
   };
 
+  const handleKeyDown = (event) => {
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    sendDraft();
+  };
+
   return (
     <aside className={`chat-panel ${open ? "chat-panel--open" : "chat-panel--closed"}`} aria-hidden={!open} aria-label="Чат и участники">
+      <button className="chat-panel__close" type="button" onClick={onClose} title="Закрыть чат">
+        <X aria-hidden="true" size={18} strokeWidth={1.6} />
+      </button>
+
       <section className="participants-list" aria-labelledby="participants-title">
         <h2 id="participants-title">Участники</h2>
         <ul>
@@ -55,9 +72,11 @@ export function ChatPanel({ open, messages, participants, onSendMessage }) {
 
       <form className="chat-form" onSubmit={submit}>
         <label className="sr-only" htmlFor="chat-message">Сообщение</label>
-        <input
+        <textarea
           id="chat-message"
+          rows={1}
           value={draft}
+          onKeyDown={handleKeyDown}
           onChange={(event) => {
             setDraft(event.target.value);
             setError("");

@@ -167,6 +167,7 @@ export function RoomPage({ roomId, roomName, displayName, initialMediaPreference
       <ChatPanel
         open={chatOpen}
         messages={socketRoom.messages}
+        onClose={() => setChatOpen(false)}
         participants={socketRoom.participants}
         onSendMessage={socketRoom.sendMessage}
       />
