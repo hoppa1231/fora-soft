@@ -19,7 +19,8 @@ function serializeParticipant(participant) {
     displayName: participant.displayName,
     joinedAt: participant.joinedAt,
     audioEnabled: participant.audioEnabled,
-    videoEnabled: participant.videoEnabled
+    videoEnabled: participant.videoEnabled,
+    screenSharing: participant.screenSharing
   };
 }
 
@@ -38,7 +39,7 @@ export class RoomStore {
     this.socketIndex = new Map();
   }
 
-  createOrJoinRoom({ roomId, roomName, socketId, displayName, audioEnabled = false, videoEnabled = false }) {
+  createOrJoinRoom({ roomId, roomName, socketId, displayName, audioEnabled = false, videoEnabled = false, screenSharing = false }) {
     let room = this.rooms.get(roomId);
 
     if (!room) {
@@ -69,7 +70,8 @@ export class RoomStore {
       displayName,
       joinedAt: Date.now(),
       audioEnabled,
-      videoEnabled
+      videoEnabled,
+      screenSharing
     };
 
     room.participants.set(socketId, participant);
@@ -166,7 +168,7 @@ export class RoomStore {
     return { ok: true, message };
   }
 
-  updateParticipantMedia({ roomId, socketId, audioEnabled, videoEnabled }) {
+  updateParticipantMedia({ roomId, socketId, audioEnabled, videoEnabled, screenSharing = false }) {
     const room = this.rooms.get(roomId);
     const participant = room?.participants.get(socketId);
 
@@ -176,6 +178,7 @@ export class RoomStore {
 
     participant.audioEnabled = audioEnabled;
     participant.videoEnabled = videoEnabled;
+    participant.screenSharing = screenSharing;
 
     return {
       ok: true,

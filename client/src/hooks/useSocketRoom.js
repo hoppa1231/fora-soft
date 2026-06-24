@@ -41,7 +41,8 @@ export function useSocketRoom({ roomId, roomName, displayName, enabled, initialM
           roomName,
           displayName,
           audioEnabled: initialMediaStateRef.current.audioEnabled,
-          videoEnabled: initialMediaStateRef.current.videoEnabled
+          videoEnabled: initialMediaStateRef.current.videoEnabled,
+          screenSharing: initialMediaStateRef.current.screenSharing
         },
         (response) => {
           if (!response?.ok) {

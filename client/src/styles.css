@@ -399,9 +399,16 @@ button {
 
 .participant-tile__video {
   display: block;
-  object-fit: contain;
   object-position: center;
   background: #080b0a;
+}
+
+.participant-tile__video--cover {
+  object-fit: cover;
+}
+
+.participant-tile__video--contain {
+  object-fit: contain;
 }
 
 .participant-tile__placeholder {

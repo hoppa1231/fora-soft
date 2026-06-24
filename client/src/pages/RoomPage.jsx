@@ -29,7 +29,8 @@ export function RoomPage({ roomId, roomName, displayName, initialMediaPreference
   const joined = socketRoom.status === "joined";
   const publishedMediaState = useMemo(() => ({
     audioEnabled: localMedia.mediaState.audioEnabled,
-    videoEnabled: localMedia.mediaState.videoEnabled || localMedia.screenSharing
+    videoEnabled: localMedia.mediaState.videoEnabled || localMedia.screenSharing,
+    screenSharing: localMedia.screenSharing
   }), [localMedia.mediaState.audioEnabled, localMedia.mediaState.videoEnabled, localMedia.screenSharing]);
   const peers = usePeerConnections({
     participantId: socketRoom.participantId,
@@ -59,8 +60,9 @@ export function RoomPage({ roomId, roomName, displayName, initialMediaPreference
     displayName,
     audioEnabled: publishedMediaState.audioEnabled,
     videoEnabled: publishedMediaState.videoEnabled,
+    screenSharing: publishedMediaState.screenSharing,
     isLocal: true
-  }), [displayName, publishedMediaState.audioEnabled, publishedMediaState.videoEnabled, socketRoom.participantId]);
+  }), [displayName, publishedMediaState.audioEnabled, publishedMediaState.screenSharing, publishedMediaState.videoEnabled, socketRoom.participantId]);
 
   const participants = useMemo(() => {
     const remoteParticipants = socketRoom.participants.filter((participant) => participant.id !== socketRoom.participantId);

@@ -46,3 +46,22 @@ test("keeps chat history for room lifetime", () => {
   assert.equal(message.ok, true);
   assert.equal(store.getRoom("room2").messages.at(-1).text, "Привет");
 });
+
+test("updates participant media state with screen sharing", () => {
+  const store = new RoomStore();
+  store.createOrJoinRoom({ roomId: "room3", socketId: "socket-1", displayName: "Алекс" });
+
+  const result = store.updateParticipantMedia({
+    roomId: "room3",
+    socketId: "socket-1",
+    audioEnabled: true,
+    videoEnabled: true,
+    screenSharing: true
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.participant.audioEnabled, true);
+  assert.equal(result.participant.videoEnabled, true);
+  assert.equal(result.participant.screenSharing, true);
+  assert.equal(store.getRoom("room3").participants[0].screenSharing, true);
+});

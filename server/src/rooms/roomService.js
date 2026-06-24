@@ -16,7 +16,8 @@ export function joinRoom({ store, payload, socketId }) {
     socketId,
     displayName: displayNameResult.value,
     audioEnabled: asBoolean(payload?.audioEnabled),
-    videoEnabled: asBoolean(payload?.videoEnabled)
+    videoEnabled: asBoolean(payload?.videoEnabled),
+    screenSharing: asBoolean(payload?.screenSharing)
   });
 }
 
@@ -42,7 +43,8 @@ export function updateMediaState({ store, payload, socketId }) {
     roomId: roomIdResult.value,
     socketId,
     audioEnabled: asBoolean(payload?.audioEnabled),
-    videoEnabled: asBoolean(payload?.videoEnabled)
+    videoEnabled: asBoolean(payload?.videoEnabled),
+    screenSharing: asBoolean(payload?.screenSharing)
   });
 }
 

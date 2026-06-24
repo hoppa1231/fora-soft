@@ -5,6 +5,7 @@ export function ParticipantTile({ participant, stream, volume = 100, onVolumeCha
   const audioRef = useRef(null);
   const videoRef = useRef(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [videoFit, setVideoFit] = useState("cover");
   const hasVideo = participant.videoEnabled && Boolean(stream?.getVideoTracks().some((track) => track.readyState === "live"));
   const hasBadges = !participant.audioEnabled || !participant.videoEnabled;
   const audioTrack = stream?.getAudioTracks().find((track) => track.readyState === "live");
@@ -16,6 +17,37 @@ export function ParticipantTile({ participant, stream, volume = 100, onVolumeCha
       videoRef.current.play().catch(() => {});
     }
   }, [hasVideo, stream]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !hasVideo) {
+      setVideoFit("cover");
+      return undefined;
+    }
+
+    const updateFit = () => {
+      if (participant.screenSharing) {
+        setVideoFit("contain");
+        return;
+      }
+
+      if (video.videoWidth > 0 && video.videoHeight > video.videoWidth) {
+        setVideoFit("contain");
+        return;
+      }
+
+      setVideoFit("cover");
+    };
+
+    updateFit();
+    video.addEventListener("loadedmetadata", updateFit);
+    video.addEventListener("resize", updateFit);
+
+    return () => {
+      video.removeEventListener("loadedmetadata", updateFit);
+      video.removeEventListener("resize", updateFit);
+    };
+  }, [hasVideo, participant.screenSharing, stream]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -132,7 +164,7 @@ export function ParticipantTile({ participant, stream, volume = 100, onVolumeCha
           autoPlay
           playsInline
           muted
-          className="participant-tile__video"
+          className={`participant-tile__video participant-tile__video--${videoFit}`}
         />
       ) : (
         <div className="participant-tile__placeholder">
